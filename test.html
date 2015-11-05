@@ -1,0 +1,17 @@
+<html>
+    <head>
+        <script type='text/javascript' src='external/jquery-2.1.4.js'></script>
+        <script type='text/javascript' src='stalwart/stalwart.js'></script>
+        <script type='text/javascript'>
+            sW.init();
+            sW.include('sW.test', sW.rootPath()+'test.js');
+            sW.run(function(){
+                console.log(sW.getModule('sW.Class'));
+            });
+        </script>
+    </head>
+
+    <body>
+        <h1>Hello World</h1>
+    </body>
+</html>
