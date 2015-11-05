@@ -110,6 +110,8 @@ sW.Class.Class = function(){
         this.expose = function(){
             //create getters (with optional callback on change) and setters
             //no longer using watchVar
+
+            //TODO: if you do a.setVar(b.getVar(a.setVar)) a.setVar is being executed oddly, but it works if you wrap it in another function!
             if (typeof this.__watchers == 'undefined'){
                 this.__watchers = {};
             }
