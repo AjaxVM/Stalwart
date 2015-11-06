@@ -32,6 +32,8 @@
 
 sW.module('sW.Class');
 
+sW.Class.__classes = {};
+
 sW.Class.grabNewFuncs = function(oldVars, newVars){
     //return array of key names of new functions not in old
     var newFuncs = [];
@@ -56,42 +58,55 @@ sW.Class.sillyCopyObj = function(obj){
     return newObj;
 }
 
-sW.Class.MakeSuper = function(self, cls, funcname){
+sW.Class.MakeSuper = function(self, className, funcName, func){
     if (typeof self.__superStore == 'undefined'){
         self.__superStore = {};
     }
-    var name = cls+'.'+funcname;
+    var compName = className+'.'+funcName;
     if (typeof self.__super == 'undefined'){
-        self.__super = function(func, other){
-            self.__superStore[func].apply(self, other);
+        self.__super = function(clsFuncName, other){
+            self.__superStore[clsFuncName].apply(self, other);
         }
     }
-    self.__superStore[name] = self[funcname];
+    self.__superStore[compName] = func;
 }
 
-sW.Class.Inherit = function(cls, alias, self, other){
+sW.Class.Inherit = function(className, self){
     var oldVars = sW.Class.sillyCopyObj(self);
-        cls.apply(self, other);
+
+    var cls = sW.Class.__classes[className];
+    cls.apply(self);
     
-    var newFuncs = grabNewFuncs(oldVars, self);
+    var newFuncs = sW.Class.grabNewFuncs(oldVars, self);
     for (var i=0; i<newFuncs.length; i++){
-        sW.Class.MakeSuper(self, alias, newFuncs[i]);
+        var oldFunc = oldVars[newFuncs[i]];
+        sW.Class.MakeSuper(self, className, newFuncs[i], oldFunc);
     }
 }
 
 sW.Class.Class = function(){
-    //takes one or two arguments, last is definition of object, first (if any) is array of classes to inherit
-    var definition = null;
-    var inherits = null;
-    if (arguments.length>=2){
-        inherits = arguments[0];
-        definition = arguments[1];
-    } else {
-        definition = arguments[0];
+    //takes two or three arguments:
+    //  first is always the Class Name (string);
+    //  second is optional, and an array of Class Names to inherit
+    //  last is always the function definition for the class
+    var __definition = null;
+    var __className = null;
+    var __inherits = null;
+    if (arguments.length == 2){
+        __className = arguments[0];
+        __definition = arguments[1];
+    } else if (arguments.length == 3){
+        __className = arguments[0];
+        __inherits = arguments[1];
+        __definition = arguments[2];
+    } else{
+        throw new TypeError('Wrong number of arguments!');
     }
-    return function(){
-        //constants that might be needed
 
+    sW.Class.__classes[__className] = function(){
+        //constants, some only created if needed
+
+        // __className - set after applying parents so it is correct
         //__superStore - by class store the super functions
         //__super - function to execute a super function
         //__parents - store of parent classes with their aliases
@@ -105,6 +120,34 @@ sW.Class.Class = function(){
 
         this.instanceOf = function(cls){
             //TODO: check if this inherits from cls, or one of our inherits.instanceOf(cls) (chaining up)
+
+            var clsName = cls;
+            if (typeof cls.__className != 'undefined'){
+                clsName = cls.__className;
+            }
+
+            //check if this is instanceOf cls
+            if (this.__className == clsName){
+                return true;
+            }
+
+            if (typeof this.__parents != 'undefined'){
+                //check if this is a direct parent
+                if (this.__parents.indexOf(clsName) != -1){
+                    return true;
+                }
+
+                //TODO: currently we are throwing all parents onto the same list - but want a real tree
+
+                // //check if any parent is instanceOf(cls)
+                // for (var i=0; i<this.__parents.length; i++){
+                //     if (this.__parents[i].instanceOf(cls)){
+                //         return true;
+                //     }
+                // }
+            }
+
+            return false;
         }
 
         this.expose = function(){
@@ -129,10 +172,7 @@ sW.Class.Class = function(){
                     }
 
                     //create getter
-                    this['get'+capName] = function(callback){
-                        if (callback){
-                            this.__watchers[name].push(callback);
-                        }
+                    this['get'+capName] = function(){
                         return this[name];
                     }
 
@@ -140,8 +180,10 @@ sW.Class.Class = function(){
                     this['set'+capName] = function(value){
                         if (value !== this[name]){
                             this[name] = value;
-                            for (var i=0; i<this.__watchers[name].length; i++){
-                                this.__watchers[name][i](value);
+                            if (this.__watchers[name].length){
+                                for (var i=0; i<this.__watchers[name].length; i++){
+                                    this.__watchers[name][i](value);
+                                }
                             }
                         }
                     }
@@ -149,13 +191,31 @@ sW.Class.Class = function(){
             }
         }
 
-        if (inherits){
-            for (var i=0; i<inherits.length; i++){
-                sW.Class.Inherit(inherits[i], this);
+        if (__inherits){
+            //TODO: this should be only immediate parents, and build a tree for more :/
+            if (typeof this.__parents == 'undefined'){
+                this.__parents = [];
+            }
+            for (var i=0; i<__inherits.length; i++){
+                var inh = __inherits[i];
+                //handle Classes or Class Names
+                if (typeof inh.__className != 'undefined'){
+                    inh = inh.__className;
+                }
+                sW.Class.Inherit(inh, this);
+                this.__parents.push(inh);
             }
         }
-        definition.apply(this, arguments);
+
+        __definition.apply(this);
+
+        this.__className = __className;
         
         this.init.apply(this, arguments);
     }
+
+    //store the __className on the definition as well, so it is there for comparisons
+    sW.Class.__classes[__className].__className = __className;
+
+    return sW.Class.__classes[__className];
 }

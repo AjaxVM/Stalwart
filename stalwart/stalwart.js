@@ -101,6 +101,7 @@ sW.init = function(){
     sW.include('sW.Utils', path+'utils.js');
     sW.include('sW.Class', path+'class.js');
     sW.include('sW.Test', path+'test.js');
+    sW.include('sW.Core', path+'core.js');
 }
 
 sW.run = function(callback){

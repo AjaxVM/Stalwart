@@ -8,6 +8,17 @@ sW.Utils.sleepFor = function( sleepDuration ){
     while(new Date().getTime() < now + sleepDuration){ /* do nothing */ } 
 }
 
+sW.Utils.capitalize = function(value){
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+sW.Utils.removeFrom = function(arr, value){
+    var i = arr.indexOf(value);
+    if (i > -1){
+        arr.splice(i, 1);
+    }
+}
+
 sW.Utils.forEach = function(obj_or_arr, callback){
     //If array will call callback with (element, index) as arguments
     //If object will call callback with (element, key, index) as arguments
@@ -54,3 +65,5 @@ sW.Utils.formatString = function(string, args, sep){
     
     return string;
 }
+
+sW.Utils.assert
