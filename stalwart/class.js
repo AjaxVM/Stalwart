@@ -191,6 +191,42 @@ sW.Class.Class = function(){
             }
         }
 
+        this.listen = function(varName, callback){
+            //attaches a listener to this.varName (requires it be exposed)
+            if (typeof this.__watchers[varName] == 'undefined'){
+                throw new AttributeError(varName+' is not exposed!');
+            }
+            this.__watchers[varName].push(callback);
+
+            return function(){
+                sW.Utils.removeFrom(this.__watchers[varName], callback);
+            }
+        }
+
+        this.watch = function(var1, obj2, var2){
+            //binds this.var1 to obj2.var2
+            var obj1 = this;
+            var setter = function(value){
+                var name = 'set' + var1.charAt(0).toUpperCase() + var1.slice(1);
+                obj1[name](value);
+            }
+
+            setter(obj2[var2]);
+
+            return obj2.listen(var2, setter);
+        }
+
+        this.bind = function(var1, obj2, var2){
+            var unbind1 = this.watch(var1, obj2, var2);
+            var unbind2 = obj2.watch(var2, this, var1);
+
+            return function(){
+                unbind1();
+                unbind2();
+            }
+        }
+
+
         if (__inherits){
             //TODO: this should be only immediate parents, and build a tree for more :/
             if (typeof this.__parents == 'undefined'){
@@ -219,3 +255,5 @@ sW.Class.Class = function(){
 
     return sW.Class.__classes[__className];
 }
+
+// sW.endModule('sW.Class');

@@ -37,41 +37,41 @@
                     }
                 });
 
-                a = new Being();
-                console.log(a);
-                b = new Animal();
-                console.log(b);
-                c = new Dog();
-                console.log(c);
+                // a = new Being();
+                // console.log(a);
+                // b = new Animal();
+                // console.log(b);
+                // c = new Dog();
+                // console.log(c);
 
-                console.log('----');
+                // console.log('----');
 
-                console.log(a.instanceOf(Being), a.instanceOf(Animal), a.instanceOf(Dog)); //true,false,false
-                console.log(b.instanceOf(Being), b.instanceOf(Animal), b.instanceOf(Dog)); //true,true,false
-                console.log(c.instanceOf(Being), c.instanceOf(Animal), c.instanceOf(Dog)); //true,true,true
+                // console.log(a.instanceOf(Being), a.instanceOf(Animal), a.instanceOf(Dog)); //true,false,false
+                // console.log(b.instanceOf(Being), b.instanceOf(Animal), b.instanceOf(Dog)); //true,true,false
+                // console.log(c.instanceOf(Being), c.instanceOf(Animal), c.instanceOf(Dog)); //true,true,true
 
-                console.log('----');
+                // console.log('----');
 
-                var un = sW.Core.watch(a, 'age', b, 'age');
-                a.setAge(45);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 45,45,0
-                un();
+                // var un = a.watch('age', b, 'age');//sW.Core.watch(a, 'age', b, 'age');
+                // a.setAge(45);
+                // console.log(a.getAge(), b.getAge(), c.getAge()); // 45,45,0
+                // un();
 
-                console.log('----');
+                // console.log('----');
 
-                un = sW.Core.bind(a, 'age', c, 'age');
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 45,45,45
-                a.setAge(57);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 57,45,57
-                un();
+                // un = a.bind('age', c, 'age');//sW.Core.bind(a, 'age', c, 'age');
+                // console.log(a.getAge(), b.getAge(), c.getAge()); // 45,45,45
+                // a.setAge(57);
+                // console.log(a.getAge(), b.getAge(), c.getAge()); // 57,45,57
+                // un();
 
-                console.log('----');
-                a.setAge(15);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 15,45,57
-                b.setAge(30);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 15,30,57
-                c.setAge(45);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 15,30,45
+                // console.log('----');
+                // a.setAge(15);
+                // console.log(a.getAge(), b.getAge(), c.getAge()); // 15,45,57
+                // b.setAge(30);
+                // console.log(a.getAge(), b.getAge(), c.getAge()); // 15,30,57
+                // c.setAge(45);
+                // console.log(a.getAge(), b.getAge(), c.getAge()); // 15,30,45
             });
         </script>
     </head>

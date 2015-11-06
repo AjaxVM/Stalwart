@@ -66,4 +66,6 @@ sW.Utils.formatString = function(string, args, sep){
     return string;
 }
 
-sW.Utils.assert
+//sW.Utils.assert
+
+// sW.endModule('sW.Utils');

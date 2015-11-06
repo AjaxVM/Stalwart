@@ -19,6 +19,7 @@
 var sW = {};
 sW.version = '0.1';
 sW.__modules = {};
+//sW.__loadingModules = [];
 
 sW.module = function(name){
     //Define a Stalwart "Module"
@@ -39,6 +40,14 @@ sW.module = function(name){
     }
 }
 
+// sW.endModule = function(name){
+//     console.log('Stalwart Module "'+name+'" loaded!');
+//     var ind = sW.__loadingModules.indexOf(name);
+//     if (ind > -1){
+//         sW.__loadingModules.splice(ind, 1);
+//     }
+// }
+
 sW.getModule = function(name){
     //Return the namespace for a module
     return sW.__modules[name];
@@ -49,7 +58,12 @@ sW.require = function(req){
     //Will check if req is a loaded module, otherwise it checks on the window namespace
     //Will safely check sub-variables:
     //    sW.require("library.variable") - evaluates to window.library.variable
+
     if (name.indexOf('sW.') == 0){
+        // //wait if this is loading
+        // while (sW.__loadingModules.indexOf(req) > -1){
+        //     console.log('.');
+        // }
         if (typeof sW.__modules[req] != undefined){
             return true; //loaded as module
         }
@@ -70,9 +84,11 @@ sW.include = function(module_name, script){
     //Tries to load the given module script with name
     //If module is already present will silently fail (allowing minification)
     if (!sW.__modules[module_name]){
+        //sW.__loadingModules.push(module_name);
         var js = document.createElement("script");
         js.type = 'text/javascript';
         js.src = script;
+        js.async = false;
 
         document.head.appendChild(js);
     }
@@ -97,11 +113,14 @@ sW.init = function(){
     //grab our source directory
     var path = sW.rootPath();
 
+    //TODO: make include check if anything else is being included
+    //if nothing, inject and set as currently loading
+    //if something is there, push to loadingModules
+    //on completion of load check if anything is added to loading, remove top and load it
+
     sW.include('sW.Defaults', path+'defaults.js');
     sW.include('sW.Utils', path+'utils.js');
     sW.include('sW.Class', path+'class.js');
-    sW.include('sW.Test', path+'test.js');
-    sW.include('sW.Core', path+'core.js');
 }
 
 sW.run = function(callback){
