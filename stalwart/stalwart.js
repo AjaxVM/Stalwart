@@ -19,7 +19,26 @@
 var sW = {};
 sW.version = '0.1';
 sW.__modules = {};
-//sW.__loadingModules = [];
+sW.__loadingModule = false;
+sW.__loadingModuleCurrent = null;
+sW.__queuedModules = [];
+// sW.__needRun = false;
+// sW.__runCallback = null;
+sW.__callbacksWaitingForFullLoad = [];
+sW.__windowLoaded = false;
+sW.debugLog = false;
+sW.__debugLogMaps = {
+    'log': 'Debug',
+    'warn': 'Warning',
+    'error': 'Error'}
+
+sW.__debug = function(value, type){
+    type = type || 'log';
+    var start = sW.__debugLogMaps[type];
+    if (type != 'log' || sW.debugLog){
+        console[type](start+': '+value);
+    }
+}
 
 sW.module = function(name){
     //Define a Stalwart "Module"
@@ -40,18 +59,79 @@ sW.module = function(name){
     }
 }
 
-// sW.endModule = function(name){
-//     console.log('Stalwart Module "'+name+'" loaded!');
-//     var ind = sW.__loadingModules.indexOf(name);
-//     if (ind > -1){
-//         sW.__loadingModules.splice(ind, 1);
-//     }
-// }
-
 sW.getModule = function(name){
     //Return the namespace for a module
     return sW.__modules[name];
 }
+
+sW.__injectModule = function(module_name, script){
+    sW.__debug('Stalwart Module "'+module_name+'" loading');
+    sW.__loadingModuleCurrent = module_name;
+    var js = document.createElement("script");
+    js.type = 'text/javascript';
+    js.src = script;
+    //TODO: is it safe to check this even in IE?
+    //js.async = false;
+
+    document.head.appendChild(js);
+}
+
+sW.loadingModule = function(module_name){
+    if (!module_name){
+        return (sW.__queuedModules.length > 0 || sW.__loadingModule);
+    } else {
+        return (sW.__queuedModules.indexOf(module_name) > -1 || sW.__loadingModuleCurrent == module_name);
+    }
+}
+
+sW.__executeWaitingCallbacks = function(){
+    for (var i=0; i<sW.__callbacksWaitingForFullLoad.length; i++){
+        sW.__callbacksWaitingForFullLoad[i]();
+    }
+
+    sW.__callbacksWaitingForFullLoad = [];
+}
+
+sW.onFullLoad = function(callback){
+    if (sW.__windowLoaded && !sW.loadingModule()){
+        callback();
+    } else {
+        sW.__callbacksWaitingForFullLoad.push(callback);
+    }
+}
+
+sW.include = function(module_name, script){
+    //Tries to load the given module script with name
+    //If module is already present will silently fail (allowing minification)
+    if (!(sW.__modules[module_name] || sW.loadingModule(module_name))){
+        //if we have something being loaded, wait
+        if (sW.__loadingModule){
+            sW.__queuedModules.push([module_name, script]);
+        } else {
+            sW.__loadingModule = true;
+            sW.__injectModule(module_name, script);
+        }
+    } else {
+        sW.__debug('Stalwart Module "'+module_name+'" already loaded', 'warn');
+    }
+}
+
+sW.endModule = function(name){
+    //module name is finished, check if we have any waiting modules or runs that are needed
+    sW.__debug('Stalwart Module "'+name+'" loaded!');
+    sW.__loadingModule = false;
+
+    if (sW.__queuedModules.length){
+        //sW.__loadingModule is now false so include will allow execution
+        var mod = sW.__queuedModules.shift();
+        sW.include(mod[0], mod[1]);
+    } else if (sW.__windowLoaded) {
+        sW.__executeWaitingCallbacks();
+        // sW.__needRun = false;
+        // sW.__runCallback();
+    }
+}
+
 
 sW.require = function(req){
     //Throws an error if req is not found
@@ -80,20 +160,6 @@ sW.require = function(req){
     return true;
 }
 
-sW.include = function(module_name, script){
-    //Tries to load the given module script with name
-    //If module is already present will silently fail (allowing minification)
-    if (!sW.__modules[module_name]){
-        //sW.__loadingModules.push(module_name);
-        var js = document.createElement("script");
-        js.type = 'text/javascript';
-        js.src = script;
-        js.async = false;
-
-        document.head.appendChild(js);
-    }
-}
-
 sW.rootPath = function(){
     //Returns the path to the stalwart.js file from the script src attribute
     var script = $("script[src$='stalwart.js']");
@@ -103,9 +169,18 @@ sW.rootPath = function(){
 
 sW.init = function(){
     //Checks core requirements and loads core modules
+    //also will execute callback (optional second or only arg) after page has loaded and all dependencies are loaded
+    //prereqs (optional first arg - Array) is an Array of [module_name, path] values to include before running
 
     //TODO: wait for modules to all load before allowing sW.run to execute
     //This appears to be working - but needs to be confirmed!
+
+    if (arguments.length==1){
+        var callback = arguments[0];
+    } else if (arguments.length == 2){
+        var prereqs = arguments[0];
+        var callback = arguments[1];
+    }
 
     //ensure requirements are present, and load our modules
     sW.require('jQuery');
@@ -121,10 +196,31 @@ sW.init = function(){
     sW.include('sW.Defaults', path+'defaults.js');
     sW.include('sW.Utils', path+'utils.js');
     sW.include('sW.Class', path+'class.js');
-}
 
-sW.run = function(callback){
-    //Attaches callback to window.onload
+    if (prereqs){
+        for (var i=0; i<prereqs.length; i++){
+            sW.include(prereqs[i][0], prereqs[i][1]);
+        }
+    }
 
-    window.onload = callback;
+    // sW.__runCallback = callback;
+    // sW.__needRun = false;
+
+    //window.onload = callback;
+
+    window.onload = function(){
+        sW.__windowLoaded = true;
+        if (!sW.loadingModule()){
+            sW.__executeWaitingCallbacks();
+            callback();
+        } else if (callback){
+            sW.onFullLoad(callback);
+        }
+        // if (sW.__loadingModule){
+        //     //sW.__needRun = true;
+        //     sW.__callbacksWaitingForFullLoad.push(callback);
+        // } else {
+        //     sW.__runCallback();
+        // }
+    }
 }

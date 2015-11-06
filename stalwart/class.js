@@ -198,8 +198,13 @@ sW.Class.Class = function(){
             }
             this.__watchers[varName].push(callback);
 
+            var thisthis = this;
+
             return function(){
-                sW.Utils.removeFrom(this.__watchers[varName], callback);
+                var ind = thisthis.__watchers[varName].indexOf(callback);
+                if (ind > -1){
+                    thisthis.__watchers[varName].splice(ind, 1);
+                }
             }
         }
 
@@ -256,4 +261,4 @@ sW.Class.Class = function(){
     return sW.Class.__classes[__className];
 }
 
-// sW.endModule('sW.Class');
+sW.endModule('sW.Class');

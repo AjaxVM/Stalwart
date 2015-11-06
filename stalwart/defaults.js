@@ -19,4 +19,4 @@ sW.Defaults.getDefault = function(func, name){
     return sW.Defaults.__defaults[func][name];
 }
 
-// sW.endModule('sW.Defaults');
+sW.endModule('sW.Defaults');
