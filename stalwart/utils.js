@@ -1,7 +1,7 @@
 
-sW.require('sW.Defaults');
+sW.Module.require('sW.Defaults');
 
-sW.module('sW.Utils');
+sW.Module.define('sW.Utils');
 
 sW.Utils.sleepFor = function( sleepDuration ){
     var now = new Date().getTime();
@@ -68,4 +68,4 @@ sW.Utils.formatString = function(string, args, sep){
 
 //sW.Utils.assert
 
-sW.endModule('sW.Utils');
+sW.Module.defined('sW.Utils');

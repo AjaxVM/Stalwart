@@ -1,21 +1,24 @@
 <html>
     <head>
         <script type='text/javascript' src='external/jquery-2.1.4.js'></script>
-        <script type='text/javascript' src='stalwart/stalwart.js'></script>
+        <script type='text/javascript' src='stalwart/stalwart.js' stalwart></script>
         <script type='text/javascript'>
             //sW.debugLog = true;
             //try requiring a fake module - should crash out the execution of sW.init completely
             var prereqs = [
                 // ['sW.testy', sW.rootPath()+'testy.js']
             ];
+            sW.Trigger.on('sW.Module.moduleLoaded', function(name){
+                console.log(name+' loaded!');
+            });
             sW.init(prereqs, function(){
                 //test including non-existant module
                 //this will async load module and apply it AFTER the rest of this script has executed
                 //use sW.onFullLoad(callback) to run code after all sW.includes are done
-                sW.include('sW.test', sW.rootPath()+'test.js');
+                //sW.Module.include('sW.test', sW.rootPath()+'test.js');
                 //test including something we already have
-                sW.include('sW.Class', sW.rootPath()+'class.js');
-                console.log(sW.getModule('sW.Class')); //test getting module - should log an object representing the sW.Class namespace
+                //sW.Module.include('sW.Class', sW.rootPath()+'class.js');
+                console.log(sW.Module.get('sW.Class')); //test getting module - should log an object representing the sW.Class namespace
 
                 //test inheritance and instanceOf
                 Being = sW.Class.Class('Being', function(){
@@ -44,50 +47,31 @@
                     }
                 });
 
-                console.log ('---- 1');
-
                 a = new Being();
-                console.log(a);
                 b = new Animal();
-                console.log(b);
                 c = new Dog();
-                console.log(c);
 
-                console.log('---- 2');
-
-                console.log(a.instanceOf(Being), a.instanceOf(Animal), a.instanceOf(Dog)); //true,false,false
-                console.log(b.instanceOf(Being), b.instanceOf(Animal), b.instanceOf(Dog)); //true,true,false
-                console.log(c.instanceOf(Being), c.instanceOf(Animal), c.instanceOf(Dog)); //true,true,true
-
-                console.log('---- 3');
+                console.log(a.instanceOf(Being), a.instanceOf(Animal), a.instanceOf(Dog), 'true false false');
+                console.log(b.instanceOf(Being), b.instanceOf(Animal), b.instanceOf(Dog), 'true true false');
+                console.log(c.instanceOf(Being), c.instanceOf(Animal), c.instanceOf(Dog), 'true true true');
 
                 var un = a.watch('age', b, 'age'); //also sets a.age to b.age
                 b.setAge(45);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 45,45,0
+                console.log(a.getAge(), b.getAge(), c.getAge(), '45 45 0'); // 45,45,0
                 un();
-
-                console.log('---- 4');
 
                 un = a.bind('age', c, 'age'); //also sets a.age to c.age
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 0,45,0
+                console.log(a.getAge(), b.getAge(), c.getAge(), '0 45 0'); // 0,45,0
                 a.setAge(57);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 57,45,57
+                console.log(a.getAge(), b.getAge(), c.getAge(), '57 45 57'); // 57,45,57
                 un();
 
-                console.log('---- 5');
                 a.setAge(15);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 15,45,57
+                console.log(a.getAge(), b.getAge(), c.getAge(), '15 45 57'); // 15,45,57
                 b.setAge(30);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 15,30,57
+                console.log(a.getAge(), b.getAge(), c.getAge(), '15 30 57'); // 15,30,57
                 c.setAge(45);
-                console.log(a.getAge(), b.getAge(), c.getAge()); // 15,30,45
-
-                //spike memory and create 10000 Dogs
-                var dogs = [];
-                for (var i; i<10000; i++){
-                  dogs.push(new Dog());
-                }
-                console.log('dogs loaded');
+                console.log(a.getAge(), b.getAge(), c.getAge(), '15 30 45'); // 15,30,45
             });
         </script>
     </head>

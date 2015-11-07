@@ -30,7 +30,7 @@
         //Both a and b will now be 37
 */
 
-sW.module('sW.Class');
+sW.Module.define('sW.Class');
 
 sW.Class.__classes = {};
 
@@ -261,4 +261,4 @@ sW.Class.Class = function(){
     return sW.Class.__classes[__className];
 }
 
-sW.endModule('sW.Class');
+sW.Module.defined('sW.Class');

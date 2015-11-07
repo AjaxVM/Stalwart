@@ -1,5 +1,5 @@
 
-sW.module('sW.Defaults');
+sW.Module.define('sW.Defaults');
 
 sW.Defaults.__defaults = {};
 
@@ -19,4 +19,4 @@ sW.Defaults.getDefault = function(func, name){
     return sW.Defaults.__defaults[func][name];
 }
 
-sW.endModule('sW.Defaults');
+sW.Module.defined('sW.Defaults');
