@@ -21,9 +21,6 @@
     _var = semi-private variable - this should be safe to reference but shouldn't if avoidable
 */
 
-//top level constants
-//everything should be descended from sW root object!
-
 'use strict';
 
 //require jQuery at the top level
@@ -68,7 +65,8 @@ sW.Trigger.once = function(trigger, callback){
 
 sW.Trigger.off = function(trigger, callback){
     //if callback - remove all instances of callback from listening for trigger
-    //else, clear all watchers from trigger
+    //if trigger, removes all callbacks from listening to trigger
+    //else, clear all watchers
     if (callback){
         if (sW.Trigger.__callbacksToCallOnce[trigger]){
             sW.Trigger.__callbacksToCallOnce[trigger] = $.grep(
@@ -92,6 +90,9 @@ sW.Trigger.off = function(trigger, callback){
                 }
             );
         }
+    } else if (trigger){
+        sW.Trigger.__callbacksToCallOnce[trigger] = [];
+        sW.Trigger.__callbacksToCallALot[trigger] = [];
     } else {
         sW.Trigger.__callbacksToCallOnce = {};
         sW.Trigger.__callbacksToCallALot = {};
@@ -106,7 +107,7 @@ sW.Trigger.watching = function(){
     var once = sW.Trigger.__callbacksToCallOnce;
 
     var keys = Object.keys(alot).concat(Object.keys(once));
-    $.each(keys, function(key){
+    $.each(keys, function(index, key){
         if (watching.indexOf(key) > -1){
             return;
         }
@@ -160,14 +161,24 @@ sW.onLoad = function(callback){
 //Create module "Module"
 sW.Module = {} //namespace for Module module
 sW.Module._loaded_modules = {}; //list of loaded module_name:module_namespace
-//throw in the Trigger and Debug modules since they are modules, just defined here and not included
-sW.Module._loaded_modules['sW.Trigger'] = sW.Trigger;
-sW.Module._loaded_modules['sW.Debug'] = sW.Debug;
+//define sW as a module of itself for reference
+//this also puts Trigger and Debug modules into the list
+sW.Module._loaded_modules['sW'] = sW;
+//throw in the Trigger and Debug modules since th
 sW.Module._loadingModule = null; //null or name of module being loaded presently
 sW.Module.__queuedModules = []; //list of [module_name, module_path] waiting to be loaded
 sW.Module.__callbacksWaitingForModules = []; //list of [[module_names], callback] waiting for all module_names to load before calling
 sW.Module.__afterLoadTrigger = 'sW.Module.moduleLoaded'; //name of the trigger to call after loading a module
 sW.Module.__afterAllLoadTrigger = 'sW.Module.allModulesLoaded'; //name of the trigger to call after current queue is emptied
+
+sW.Module.pathToModule = function(path){
+    var parts = path.split('.');
+    var current = sW.Module._loaded_modules;
+    $.each(parts, function(index, part){
+        current = current[part];
+    });
+    return current;
+}
 
 sW.Module.loadingModule = function(name){
     //If name is provided, return whether name is currently loading or waiting for load
@@ -180,22 +191,24 @@ sW.Module.loadingModule = function(name){
 
 sW.Module.definedModule = function(name){
     //returns whether module "name" is either loaded or being loaded
-    return sW.Module._loaded_modules[name] != undefined || sW.Module.loadingModule(name);
+    // return sW.Module._loaded_modules[name] != undefined || sW.Module.loadingModule(name);
+    return typeof sW.Module.pathToModule(name) != 'undefined' || sW.Module.loadingModule(name);
 }
 
 sW.Module.get = function(name){
     //return namespace for module "name" or undefined if it is loaded
     //first ensure this isn't loading, and thus partially _loaded_modules[name]
     if (!sW.Module.loadingModule(name)){
-        if (name.indexOf('sW.') == 0){
-            return sW[name.replace('sW.', '')];
-        } else {
-            return sW.Module._loaded_modules[name];
-        }
+        // if (name.indexOf('sW.') == 0){
+        //     return sW[name.replace('sW.', '')];
+        // } else {
+        //     return sW.Module._loaded_modules[name];
+        // }
+        return sW.Module.pathToModule(name);
     }
 }
 
-sW.Module.__injectModule = function(script_path){
+sW.Module.injectScript = function(script_path){
     //sW._loadingModule = name;
     var js = document.createElement("script");
     js.type = 'text/javascript';
@@ -215,7 +228,7 @@ sW.Module.include = function(script_path){
 
     if (!sW.Module.loadingModule()){
         //nothing loading or queued, fire this off!
-        sW.Module.__injectModule(script_path);
+        sW.Module.injectScript(script_path);
     } else {
         sW.Module.__queuedModules.push(script_path);
     }
@@ -229,7 +242,7 @@ sW.Module.includeNext = function(script_path){
 
     if (!sW.Module.loadingModule()){
         //nothing loading or queued, fire this off!
-        sW.Module.__injectModule(script_path);
+        sW.Module.injectScript(script_path);
     } else {
         sW.Module.__queuedModules.unshift(script_path);
     }
@@ -239,7 +252,7 @@ sW.Module.includeNext = function(script_path){
 sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
     if (sW.Module.__queuedModules.length){
         var cur = sW.Module.__queuedModules.shift();
-        sW.Module.__injectModule(cur);
+        sW.Module.injectScript(cur);
     } else {
         sW.Trigger.fire(sW.Module.__afterAllLoadTrigger);
     }
@@ -279,13 +292,11 @@ sW.Module.defined = function(name){
         throw new ReferenceError('Module "'+sW.module._loadingModule+'" was loading, but Module "'+name+'" is finishing!');
     }
 
-    //TODO
     sW.Module._loadingModule = null;
     sW.Trigger.fire(sW.Module.__afterLoadTrigger, name);
 }
 
 sW.Module.modulesLoaded = function(module_names){
-    //TODO: return whether all module_names are loaded
     if (typeof module_names == 'string'){
         module_names = [module_names];
     }
@@ -374,7 +385,7 @@ sW.__afterFullLoadTrigger = 'sW.loadedAndIncluded';
 sW.__afterInitTrigger = 'sW.initFinished';
 
 //set up triggers to figure out when window loaded and all modules are loaded
-sW.Trigger.on(sW.Module.__afterAllLoadTrigger, function(){
+sW.Trigger.once(sW.Module.__afterAllLoadTrigger, function(){
     //first check if window loaded already - if it is we know both finished
     if (sW._windowLoaded){
         sW.Trigger.fire(sW.__afterFullLoadTrigger);

@@ -2,6 +2,7 @@
   Copyright 2015, Matthew Roe, under MIT license
 */
 
+'use strict';
 
 sW.Module.require('sW.Defaults');
 

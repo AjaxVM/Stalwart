@@ -35,6 +35,8 @@
         //Both a and b will now be 37
 */
 
+'use strict';
+
 sW.Module.define('sW.Class', function(){
     this.__classes = {};
 
