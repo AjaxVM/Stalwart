@@ -187,12 +187,16 @@ sW.Module.get = function(name){
     //return namespace for module "name" or undefined if it is loaded
     //first ensure this isn't loading, and thus partially _loaded_modules[name]
     if (!sW.Module.loadingModule(name)){
-        return sW.Module._loaded_modules[name]
+        if (name.indexOf('sW.') == 0){
+            return sW[name.slice(3,name.length)];
+        } else {
+            return sW.Module._loaded_modules[name];
+        }
     }
 }
 
-sW.Module.__injectModule = function(name, script_path){
-    sW._loadingModule = name;
+sW.Module.__injectModule = function(script_path){
+    //sW._loadingModule = name;
     var js = document.createElement("script");
     js.type = 'text/javascript';
     js.src = script_path;
@@ -200,7 +204,7 @@ sW.Module.__injectModule = function(name, script_path){
     document.head.appendChild(js);
 }
 
-sW.Module.include = function(name, script_path){
+sW.Module.include = function(script_path){
     //load module "name" from src "script_path"
     //if nothing else is loaded, this is loaded immediately
     //otherwise it will be added to the end of the queue
@@ -211,13 +215,13 @@ sW.Module.include = function(name, script_path){
 
     if (!sW.Module.loadingModule()){
         //nothing loading or queued, fire this off!
-        sW.Module.__injectModule(name, script_path);
+        sW.Module.__injectModule(script_path);
     } else {
-        sW.Module.__queuedModules.push([name, script_path]);
+        sW.Module.__queuedModules.push(script_path);
     }
 }
 
-sW.Module.includeNext = function(name, script_path){
+sW.Module.includeNext = function(script_path){
     //works the same as include, except pushes this scrip to the top fo the queue instead of the end
     if (sW.Module.definedModule(name)){
         throw new ReferenceError('Module "'+name+'" already included');
@@ -225,9 +229,9 @@ sW.Module.includeNext = function(name, script_path){
 
     if (!sW.Module.loadingModule()){
         //nothing loading or queued, fire this off!
-        sW.Module.__injectModule(name, script_path);
+        sW.Module.__injectModule(script_path);
     } else {
-        sW.Module.__queuedModules.unshift([name, script_path]);
+        sW.Module.__queuedModules.unshift(script_path);
     }
 }
 
@@ -235,30 +239,35 @@ sW.Module.includeNext = function(name, script_path){
 sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
     if (sW.Module.__queuedModules.length){
         var cur = sW.Module.__queuedModules.shift();
-        sW.Module.__injectModule(cur[0], cur[1]);
+        sW.Module.__injectModule(cur);
     } else {
         sW.Trigger.fire(sW.Module.__afterAllLoadTrigger);
     }
 });
 
-sW.Module.define = function(name){
+sW.Module.define = function(name, definition){
     //use to begin defining a module
     //if module name begins with "sW." it will be added to sW namespace
     //Prevents redefinition of module
 
     //make sure this doesn't exist already
-    if (sW.Module.get(name) == undefined){
-        sW.Module._loaded_modules[name] = {};
-    } else {
-        throw new ReferenceError('Module "'+name+'" declared or loaded already');
+    if (sW.Module.get(name) != undefined){
+        throw new Error('Module "'+name+'" declared or loaded already');
     }
 
+    var namespace = {};
     //check if this is declaring itself a sW module
     if (name.indexOf('sW.') == 0){
-        sW[name.replace('sW.', '')] = sW.Module._loaded_modules[name];
+        sW[name.slice(3,name.length)] = namespace;
+    } else {
+        sW.Module._loaded_modules[name] = namespace;
     }
 
     sW.Module._loadingModule = name;
+
+    definition(namespace);
+
+    sW.Module.defined(name);
 }
 
 sW.Module.defined = function(name){
@@ -306,18 +315,6 @@ sW.Module.afterInclude = function(module_names, callback){
 
 //setup trigger to call when modules are loaded to check if anything needs to be executed that was waiting on them
 sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
-    // var toRemove = [];
-    // for (var i=0; i<sW.Module.__callbacksWaitingForModules.length; i++){
-    //     var cback = sW.Module.__callbacksWaitingForModules[i];
-    //     if (sW.Module.modulesLoaded(cback[0])){
-    //         cback[1]();
-    //         toRemove.push(cback);
-    //     }
-    // }
-    // for (var i=0; i<toRemove.length; i++){
-    //     sW.Module.__callbacksWaitingForModules.splice(
-    //         sW.Module.__callbacksWaitingForModules.indexOf(toRemove[i]), 1);
-    // }
     sW.Module.__callbacksWaitingForModules = $.grep(
         sW.Module.__callbacksWaitingForModules, function(callback, i){
             if (sW.Module.modulesLoaded(callback[0])){
@@ -400,9 +397,9 @@ sW.init = function(){
 
     var path = sW.rootPath();
 
-    prereqs = [['sW.Defaults',path+'defaults.js'],
-               ['sW.Utils',path+'utils.js'],
-               ['sW.Class',path+'class.js']];
+    var prereqs = [path+'defaults.js',
+               path+'utils.js',
+               path+'class.js'];
     prereqs = prereqs.concat(userPrereqs);
 
     $.each(prereqs, function(i, req){

@@ -3,24 +3,22 @@
 */
 
 
-sW.Module.define('sW.Defaults');
+sW.Module.define('sW.Defaults', function(_){
+    _.__defaults = {};
 
-sW.Defaults.__defaults = {};
 
-
-sW.Defaults.setDefault = function(func, name, value){
-    if (!sW.Defaults.__defaults[func]){
-        sW.Defaults.__defaults[func] = {}
+    _.setDefault = function(func, name, value){
+        if (!sW.Defaults.__defaults[func]){
+            sW.Defaults.__defaults[func] = {}
+        }
+        sW.Defaults.__defaults[func][name] = value;
     }
-    sW.Defaults.__defaults[func][name] = value;
-}
 
-sW.Defaults.getDefaults = function(func){
-    return sW.Defaults.__defaults[func];
-}
+    _.getDefaults = function(func){
+        return sW.Defaults.__defaults[func];
+    }
 
-sW.Defaults.getDefault = function(func, name){
-    return sW.Defaults.__defaults[func][name];
-}
-
-sW.Module.defined('sW.Defaults');
+    _.getDefault = function(func, name){
+        return sW.Defaults.__defaults[func][name];
+    }
+});
