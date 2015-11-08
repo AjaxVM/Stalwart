@@ -1,4 +1,9 @@
 /*
+  Copyright 2015, Matthew Roe, under MIT license
+*/
+
+
+/*
     Lots of ideas from:
     http://ejohn.org/blog/simple-javascript-inheritance/
     instead use ring: http://ringjs.neoname.eu/

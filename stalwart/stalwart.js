@@ -1,9 +1,7 @@
 /*
-  Copyright 2015, Matthew Roe
-
-  License is given to freely modify and redistribute this code,
-  so long as credit is given to this project.
+  Copyright 2015, Matthew Roe, under MIT license
 */
+
 
 /*
   Root module for Project Stalwart
