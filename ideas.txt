@@ -1,0 +1,24 @@
+
+What about converting modules to function callbacks which are then called on load?
+Would not need to have sW.Module.defined(name) anymore.
+Could also pass namespace in as argument?
+
+pseudo-code:
+
+sW.Module.define('sW.Utils', function(_){
+    _.whatever = 45;
+});
+
+on core side:
+
+load module from script (only need script_path now?)
+sW.Module.define(name, definition){
+    var namespace = {}:
+    if 'sW.' in name {
+        sW[name_except_start] = namespace;
+    } else {
+        sW.Module._loaded_modules[name] = namespace;
+    }
+    definition(namespace);
+    sW.Module.defined(name);
+}
