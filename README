@@ -1,4 +1,11 @@
-Copyright 2015, Matthew Roe, under MIT license.
-All core code modules are under this MIT license,
-examples and tests are released to the public domain,
-unless explicitly stated otherwise.
+Project Stalwart it is an attempt to create a uniform framework for websites.
+Currently, it is just my random thoughts trying things until I figure out what works.
+
+
+The front-end will be a simple library on top of jQuery that provides
+some of the best features of other frameworks, but without the size or bloat.
+
+For instance, two-way binding, event-watching, classes with multiple inheritance, etc.
+
+On the backend is Python using Django.
+The Django models define how fields should be validated and converted to JSON for the front-end.
