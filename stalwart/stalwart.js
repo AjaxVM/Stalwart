@@ -188,7 +188,7 @@ sW.Module.get = function(name){
     //first ensure this isn't loading, and thus partially _loaded_modules[name]
     if (!sW.Module.loadingModule(name)){
         if (name.indexOf('sW.') == 0){
-            return sW[name.slice(3,name.length)];
+            return sW[name.replace('sW.', '')];
         } else {
             return sW.Module._loaded_modules[name];
         }
@@ -258,14 +258,14 @@ sW.Module.define = function(name, definition){
     var namespace = {};
     //check if this is declaring itself a sW module
     if (name.indexOf('sW.') == 0){
-        sW[name.slice(3,name.length)] = namespace;
+        sW[name.replace('sW.', '')] = namespace;
     } else {
         sW.Module._loaded_modules[name] = namespace;
     }
 
     sW.Module._loadingModule = name;
 
-    definition(namespace);
+    definition.call(namespace);
 
     sW.Module.defined(name);
 }
@@ -296,8 +296,18 @@ sW.Module.modulesLoaded = function(module_names){
         // if (!sW.Module.loadingModule(name)){
         //     return sW.Module._loaded_modules[name]
         // }
-        if (typeof sW.Module._loaded_modules[name] == 'undefined' || sW.Module.loadingModule(name)){
+        if (sW.Module.loadingModule(name)){
             good = false;
+        }
+
+        if (name.indexOf('sW.') > -1){
+            if (typeof sW[name.slice(3,name.length)] == 'undefined'){
+                good = false;
+            }
+        } else {
+            if (typeof sW.Module._loaded_modules[name] == 'undefined'){
+                good = false;
+            }
         }
     });
 
@@ -403,7 +413,7 @@ sW.init = function(){
     prereqs = prereqs.concat(userPrereqs);
 
     $.each(prereqs, function(i, req){
-        sW.Module.include(req[0], req[1]);
+        sW.Module.include(req);
     });
 
     if (userCallback){

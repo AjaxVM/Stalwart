@@ -3,22 +3,22 @@
 */
 
 
-sW.Module.define('sW.Defaults', function(_){
-    _.__defaults = {};
+sW.Module.define('sW.Defaults', function(){
+    this.__defaults = {};
 
 
-    _.setDefault = function(func, name, value){
+    this.setDefault = function(func, name, value){
         if (!sW.Defaults.__defaults[func]){
             sW.Defaults.__defaults[func] = {}
         }
         sW.Defaults.__defaults[func][name] = value;
     }
 
-    _.getDefaults = function(func){
+    this.getDefaults = function(func){
         return sW.Defaults.__defaults[func];
     }
 
-    _.getDefault = function(func, name){
+    this.getDefault = function(func, name){
         return sW.Defaults.__defaults[func][name];
     }
 });
