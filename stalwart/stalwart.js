@@ -358,15 +358,6 @@ sW.Module.require = function(module_names){
 
 //End module "Module"
 
-//TODO: core stalwart methods not in Module
-
-//TODO: init
-//TODO: onFullLoad - fires after window.onload and all currently loadingmodules are done
-//      make window.onload event fire trigger ('Window.loaded'), if not window Loaded bind to that, and check moduleLoaded (bind even to moduleLoaded then)
-//      if it is loaded, check if all modules loaded, execute or bind to moduleLoaded trigger
-//      actually make endModule fire allModulesLoaded if nothing left to queue
-//TODO: create a "hasInit" var that is set after last core lib is loaded from init - throw error on include (unless overridden) if not hasInit (to preserve same functioanlity if minimizing or not)
-
 sW.rootPath = function(){
     //Returns the path to the stalwart.js file from the script src attribute
     //this will try to match to the stalwart.js name
@@ -383,6 +374,7 @@ sW.rootPath = function(){
 
 sW.__afterFullLoadTrigger = 'sW.loadedAndIncluded';
 sW.__afterInitTrigger = 'sW.initFinished';
+sW.finishedInit = false;
 
 //set up triggers to figure out when window loaded and all modules are loaded
 sW.Trigger.once(sW.Module.__afterAllLoadTrigger, function(){
@@ -431,10 +423,15 @@ sW.init = function(){
         sW.Trigger.once(sW.__afterFullLoadTrigger, function(){
             userCallback();
             sW.Trigger.fire(sW.__afterInitTrigger);
+            sW.finishedInit = true;
         });
     }
 }
 
 sW.afterInit = function(callback){
-    sW.Trigger.once(sW.__afterInitTrigger, callback);
+    if (sW.finishedInit){
+        callback();
+    } else {
+        sW.Trigger.once(sW.__afterInitTrigger, callback);
+    }
 }
