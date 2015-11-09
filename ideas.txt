@@ -1,2 +1,3 @@
 
-Mo more ideas?
+Currently we are having a slight issue where sometimes sW.Defaults is not loading.
+I think it is transient and due to the local file testing we have at present, but need to keep an eye on it.

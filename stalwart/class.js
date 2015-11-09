@@ -73,9 +73,7 @@ sW.Module.define('sW.Class', function(){
 
     nS.MakeSuper = function(self, className, funcName){
         var func = self[funcName];
-        if (typeof self.__superStore == 'undefined'){
-            self.__superStore = {};
-        }
+
         var compName = className+'.'+funcName;
 
         self.__superStore[compName] = func;
@@ -88,22 +86,18 @@ sW.Module.define('sW.Class', function(){
         classObj.call(self, nS.__inheritingNoInit);
         
         var newFuncs = nS.grabNewFuncs(oldVars, self);
-        //filter out internals that should not be copied
-        newFuncs = $.grep(newFuncs, function(funcName){
-            if (funcName == '__super'){
-                return false;
-            }
-            return true;
-        });
+
         for (var i=0; i<newFuncs.length; i++){
             var key = newFuncs[i];
-            //var oldFunc = oldVars[newFuncs[i]];
-            //nS.MakeSuper(self, classObj.__className, newFuncs[i], oldFunc);
             nS.MakeSuper(self, classObj.__className, key);
         }
     }
 
-    //TODO: refactor Class so the added methods for instances are prototypes to save where we can
+    //TODO: optimize Class to increase speed and reduce memory where we can
+    //Can we do any sort of prototype usage to prevent redefining internal methods?
+    //perhaps this.method = this.prototype.method (if undefined) - might save a bit?
+    //currently this takes about 550ms to instantiate 10,000 CatDogs (from unit test)
+    //    We should be able to make that much faster, hopefully
 
     nS.Class = function(){
         //takes two or three arguments:
@@ -136,119 +130,142 @@ sW.Module.define('sW.Class', function(){
             //__watchers - store of callbacks to fire when things change, bound to variable names
 
             //Default funcs
-            this.__callInit = function(){
-                if (this.init && (arguments.length == 0 || nS.__inheritingNoInit != arguments[0])){
-                    this.init.apply(this, arguments);
+            //check if this.__callInit - if it is not defined then none of the builtins are
+            //if it is they should all be or we have larger problems
+            //this speeds things up considerably, and prevents some bugginess as well
+            //such as if you inherit a Class that redefines one of these, the changed definition will be reverted
+            if (!this.__callInit){
+                this.__callInit = function(){
+                    if (this.init && (arguments.length == 0 || nS.__inheritingNoInit != arguments[0])){
+                        this.init.apply(this, arguments);
+                    }
                 }
-            }
+                this.__callInit.__builtIn = true;
 
-            this.__super = function(clsFuncName, other){
-                this.__superStore[clsFuncName].apply(this, other);
-            }
-
-            this.instanceOf = function(cls){
-                //TODO: check if this inherits from cls, or one of our inherits.instanceOf(cls) (chaining up)
-
-                var clsName = cls;
-                if (typeof cls.__className != 'undefined'){
-                    clsName = cls.__className;
+                this.__super = function(clsFuncName, other){
+                    return this.__superStore[clsFuncName].apply(this, other);
                 }
+                this.__super.__builtIn = true;
 
-                //check if this is instanceOf cls
-                if (this.__className == clsName){
-                    return true;
-                }
+                this.instanceOf = function(cls){
+                    //TODO: check if this inherits from cls, or one of our inherits.instanceOf(cls) (chaining up)
 
-                if (typeof this.__parents != 'undefined'){
-                    //check if this is a direct parent
-                    if (this.__parents.indexOf(clsName) != -1){
+                    var clsName = cls;
+                    if (typeof cls.__className != 'undefined'){
+                        clsName = cls.__className;
+                    }
+
+                    //check if this is instanceOf cls
+                    if (this.__className == clsName){
                         return true;
                     }
 
-                    //TODO: currently we are throwing all parents onto the same list - but want a real tree
-                }
-
-                return false;
-            }
-
-            this.expose = function(){
-                //create getters (with optional callback on change) and setters
-                //no longer using watchVar
-
-                //TODO: if you do a.setVar(b.getVar(a.setVar)) a.setVar is being executed oddly, but it works if you wrap it in another function!
-                if (typeof this.__watchers == 'undefined'){
-                    this.__watchers = {};
-                }
-
-                for (var i=0; i<arguments.length; i++){
-                    var name = arguments[i];
-                    //capitalize first char
-                    var capName = name.charAt(0).toUpperCase() + name.slice(1);
-
-                    //check if this is already exposed (from inheriting)
-                    if (typeof this['set'+capName] == 'undefined'){
-                        //store this variable as a watcheable var
-                        if (typeof this.__watchers[name] == 'undefined'){
-                            this.__watchers[name] = [];
+                    if (typeof this.__parents != 'undefined'){
+                        //check if this is a direct parent
+                        if (this.__parents.indexOf(clsName) != -1){
+                            return true;
                         }
 
-                        //create getter
-                        this['get'+capName] = function(){
-                            return this[name];
-                        }
+                        //TODO: currently we are throwing all parents onto the same list - but want a real tree
+                    }
 
-                        //create setter
-                        this['set'+capName] = function(value){
-                            if (value !== this[name]){
-                                this[name] = value;
-                                if (this.__watchers[name].length){
-                                    for (var i=0; i<this.__watchers[name].length; i++){
-                                        this.__watchers[name][i](value);
+                    return false;
+                }
+                this.instanceOf.__builtIn = true;
+
+                this.expose = function(){
+                    //create getters (with optional callback on change) and setters
+                    //no longer using watchVar
+
+                    //TODO: if you do a.setVar(b.getVar(a.setVar)) a.setVar is being executed oddly, but it works if you wrap it in another function!
+                    if (typeof this.__watchers == 'undefined'){
+                        this.__watchers = {};
+                    }
+
+                    for (var i=0; i<arguments.length; i++){
+                        var name = arguments[i];
+                        //capitalize first char
+                        var capName = name.charAt(0).toUpperCase() + name.slice(1);
+
+                        //check if this is already exposed (from inheriting)
+                        if (typeof this['set'+capName] == 'undefined'){
+                            //store this variable as a watcheable var
+                            if (typeof this.__watchers[name] == 'undefined'){
+                                this.__watchers[name] = [];
+                            }
+
+                            //create getter
+                            this['get'+capName] = function(){
+                                return this[name];
+                            }
+
+                            //create setter
+                            this['set'+capName] = function(value){
+                                if (value !== this[name]){
+                                    this[name] = value;
+                                    if (this.__watchers[name].length){
+                                        for (var i=0; i<this.__watchers[name].length; i++){
+                                            this.__watchers[name][i](value);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
+                this.expose.__builtIn = true;
 
-            this.listen = function(varName, callback){
-                //attaches a listener to this.varName (requires it be exposed)
-                if (typeof this.__watchers[varName] == 'undefined'){
-                    throw new AttributeError(varName+' is not exposed!');
-                }
-                this.__watchers[varName].push(callback);
+                this.listen = function(varName, callback){
+                    //attaches a listener to this.varName (requires it be exposed)
+                    if (typeof this.__watchers[varName] == 'undefined'){
+                        throw new AttributeError(varName+' is not exposed!');
+                    }
+                    this.__watchers[varName].push(callback);
 
-                var thisthis = this;
+                    var thisthis = this;
 
-                return function(){
-                    var ind = thisthis.__watchers[varName].indexOf(callback);
-                    if (ind > -1){
-                        thisthis.__watchers[varName].splice(ind, 1);
+                    return function(){
+                        var ind = thisthis.__watchers[varName].indexOf(callback);
+                        if (ind > -1){
+                            thisthis.__watchers[varName].splice(ind, 1);
+                        }
                     }
                 }
-            }
+                this.listen.__builtIn = true;
 
-            this.watch = function(var1, obj2, var2){
-                //binds this.var1 to obj2.var2
-                var obj1 = this;
-                var setter = function(value){
-                    var name = 'set' + var1.charAt(0).toUpperCase() + var1.slice(1);
-                    obj1[name](value);
+                this.watch = function(var1, obj2, var2){
+                    //binds this.var1 to obj2.var2
+                    var obj1 = this;
+                    var setter = function(value){
+                        var name = 'set' + var1.charAt(0).toUpperCase() + var1.slice(1);
+                        obj1[name](value);
+                    }
+
+                    setter(obj2[var2]);
+
+                    return obj2.listen(var2, setter);
                 }
+                this.watch.__builtIn = true;
 
-                setter(obj2[var2]);
+                this.bind = function(var1, obj2, var2){
+                    var unbind1 = this.watch(var1, obj2, var2);
+                    var unbind2 = obj2.watch(var2, this, var1);
 
-                return obj2.listen(var2, setter);
-            }
+                    return function(){
+                        unbind1();
+                        unbind2();
+                    }
+                }
+                this.bind.__builtIn = true;
 
-            this.bind = function(var1, obj2, var2){
-                var unbind1 = this.watch(var1, obj2, var2);
-                var unbind2 = obj2.watch(var2, this, var1);
-
-                return function(){
-                    unbind1();
-                    unbind2();
+                //populate this after all builtIns are finished
+                this.__superStore = {}
+                var keys = Object.keys(this);
+                for (var i=0; i<keys.length; i++){
+                    var key = keys[i];
+                    if (this[key].__builtIn){
+                        this.__superStore[key] = this[key];
+                    }
                 }
             }
 
@@ -260,10 +277,6 @@ sW.Module.define('sW.Class', function(){
                 }
                 for (var i=0; i<__inherits.length; i++){
                     var inh = __inherits[i];
-                    //handle Classes or Class Names
-                    // if (typeof inh.__className != 'undefined'){
-                    //     inh = inh.__className;
-                    // }
                     nS.Inherit(inh, this);
                     this.__parents.push(inh.__className);
                 }
@@ -273,18 +286,11 @@ sW.Module.define('sW.Class', function(){
 
             __definition.call(this);
             
-            // if (this.init){
-            //     if (!(nS.__inheritingNoInit in arguments)){
-            //         this.init.apply(this, arguments);
-            //     }
-            // }
             this.__callInit.apply(this,arguments);
         }
 
         //store the __className on the definition as well, so it is there for comparisons
         definition.__className = __className;
-
-        // nS.__classes[__className] = definition;
 
         return definition;
     }

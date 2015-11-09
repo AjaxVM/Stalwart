@@ -160,6 +160,7 @@ sW.afterInit(function(){
 
         //6,7)
         var myCatDog = new CatDog('Weirdo', 1);
+        console.log(myCatDog);
         QUnit.ok(myCatDog.instanceOf(Dog));
         QUnit.ok(myCatDog.instanceOf(Cat));
 
@@ -185,6 +186,10 @@ sW.afterInit(function(){
         //this leads to chaseAMouse (from Cat) referencing die (from Dog)
         //this could be changed to redefine die as function(reason){this.__super('Cat.die', [reason]);}
         QUnit.equal(myCatDog.deathReason, 'Weirdo (Dog) died because of: Boredom');
+
+        for (var i=0; i<10000; i++){
+            var something = new CatDog('Hello'+i, 'female');
+        }
     });
 
 });
