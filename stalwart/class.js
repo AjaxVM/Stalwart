@@ -40,6 +40,8 @@
 sW.Module.define('sW.Class', function(){
     var nS = this; //reference nameSpace for the sub functions
 
+    nS.__inheritingNoInit = "sW.Class.Class.__inheritingDoNotInit";
+
     //TODO: we don't really want to be holding on to references of objects
     //what was the reasoning behind referencing it before?
     //nS.__classes = {};
@@ -49,9 +51,10 @@ sW.Module.define('sW.Class', function(){
         var newFuncs = [];
         var keys = Object.keys(newVars);
         for (var i=0; i<keys.length; i++){
-            if (typeof newVars[keys[i]] == 'function'){
-                if (newVars[keys[i]] != oldVars[keys[i]]){
-                    newFuncs.push(keys[i]);
+            var key = keys[i];
+            if (typeof newVars[key] == 'function'){
+                if (newVars[key] != oldVars[key]){
+                    newFuncs.push(key);
                 }
             }
         }
@@ -68,31 +71,39 @@ sW.Module.define('sW.Class', function(){
         return newObj;
     }
 
-    nS.MakeSuper = function(self, className, funcName, func){
+    nS.MakeSuper = function(self, className, funcName){
+        var func = self[funcName];
         if (typeof self.__superStore == 'undefined'){
             self.__superStore = {};
         }
         var compName = className+'.'+funcName;
-        if (typeof self.__super == 'undefined'){
-            self.__super = function(clsFuncName, other){
-                self.__superStore[clsFuncName].apply(self, other);
-            }
-        }
+
         self.__superStore[compName] = func;
     }
 
-    nS.Inherit = function(className, self){
+    nS.Inherit = function(classObj, self){
         var oldVars = nS.sillyCopyObj(self);
 
-        var cls = nS.__classes[className];
-        cls.call(self);
+        //var cls = nS.__classes[className];
+        classObj.call(self, nS.__inheritingNoInit);
         
         var newFuncs = nS.grabNewFuncs(oldVars, self);
+        //filter out internals that should not be copied
+        newFuncs = $.grep(newFuncs, function(funcName){
+            if (funcName == '__super'){
+                return false;
+            }
+            return true;
+        });
         for (var i=0; i<newFuncs.length; i++){
-            var oldFunc = oldVars[newFuncs[i]];
-            nS.MakeSuper(self, className, newFuncs[i], oldFunc);
+            var key = newFuncs[i];
+            //var oldFunc = oldVars[newFuncs[i]];
+            //nS.MakeSuper(self, classObj.__className, newFuncs[i], oldFunc);
+            nS.MakeSuper(self, classObj.__className, key);
         }
     }
+
+    //TODO: refactor Class so the added methods for instances are prototypes to save where we can
 
     nS.Class = function(){
         //takes two or three arguments:
@@ -109,7 +120,7 @@ sW.Module.define('sW.Class', function(){
             __className = arguments[0];
             __inherits = arguments[1];
             __definition = arguments[2];
-        } else{
+        } else {
             throw new TypeError('Wrong number of arguments!');
         }
 
@@ -118,16 +129,22 @@ sW.Module.define('sW.Class', function(){
             //constants, some only created if needed
 
             // __className - set after applying parents so it is correct
+            // __callInit - setup to call the init function (if there is one) if this is not an inherit
             //__superStore - by class store the super functions
             //__super - function to execute a super function
             //__parents - store of parent classes with their aliases
             //__watchers - store of callbacks to fire when things change, bound to variable names
 
             //Default funcs
+            this.__callInit = function(){
+                if (this.init && (arguments.length == 0 || nS.__inheritingNoInit != arguments[0])){
+                    this.init.apply(this, arguments);
+                }
+            }
 
-            this.init = function(){
-                //intentionally blank
-            };
+            this.__super = function(clsFuncName, other){
+                this.__superStore[clsFuncName].apply(this, other);
+            }
 
             this.instanceOf = function(cls){
                 //TODO: check if this inherits from cls, or one of our inherits.instanceOf(cls) (chaining up)
@@ -244,19 +261,24 @@ sW.Module.define('sW.Class', function(){
                 for (var i=0; i<__inherits.length; i++){
                     var inh = __inherits[i];
                     //handle Classes or Class Names
-                    if (typeof inh.__className != 'undefined'){
-                        inh = inh.__className;
-                    }
+                    // if (typeof inh.__className != 'undefined'){
+                    //     inh = inh.__className;
+                    // }
                     nS.Inherit(inh, this);
-                    this.__parents.push(inh);
+                    this.__parents.push(inh.__className);
                 }
             }
 
             this.__className = __className;
 
-            __definition.apply(this);
+            __definition.call(this);
             
-            this.init.apply(this, arguments);
+            // if (this.init){
+            //     if (!(nS.__inheritingNoInit in arguments)){
+            //         this.init.apply(this, arguments);
+            //     }
+            // }
+            this.__callInit.apply(this,arguments);
         }
 
         //store the __className on the definition as well, so it is there for comparisons
