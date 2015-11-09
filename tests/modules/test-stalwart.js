@@ -1,6 +1,8 @@
+'use strict';
+
 sW.init(function(){
 
-    QUnit.module('Stalwart Core tests');
+    QUnit.module('Stalwart Core (Debug, Trigger, Module, and Init) tests');
 
     QUnit.test('Window Loaded', function(){
         //init is firing callback - so window must be loaded

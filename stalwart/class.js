@@ -38,9 +38,13 @@
 'use strict';
 
 sW.Module.define('sW.Class', function(){
-    this.__classes = {};
+    var nS = this; //reference nameSpace for the sub functions
 
-    this.grabNewFuncs = function(oldVars, newVars){
+    //TODO: we don't really want to be holding on to references of objects
+    //what was the reasoning behind referencing it before?
+    //nS.__classes = {};
+
+    nS.grabNewFuncs = function(oldVars, newVars){
         //return array of key names of new functions not in old
         var newFuncs = [];
         var keys = Object.keys(newVars);
@@ -54,7 +58,7 @@ sW.Module.define('sW.Class', function(){
         return newFuncs;
     }
 
-    this.sillyCopyObj = function(obj){
+    nS.sillyCopyObj = function(obj){
         var newObj = {};
         var keys = Object.keys(obj);
         for (var i=0; i<keys.length; i++){
@@ -64,7 +68,7 @@ sW.Module.define('sW.Class', function(){
         return newObj;
     }
 
-    this.MakeSuper = function(self, className, funcName, func){
+    nS.MakeSuper = function(self, className, funcName, func){
         if (typeof self.__superStore == 'undefined'){
             self.__superStore = {};
         }
@@ -77,20 +81,20 @@ sW.Module.define('sW.Class', function(){
         self.__superStore[compName] = func;
     }
 
-    this.Inherit = function(className, self){
-        var oldVars = sW.Class.sillyCopyObj(self);
+    nS.Inherit = function(className, self){
+        var oldVars = nS.sillyCopyObj(self);
 
-        var cls = sW.Class.__classes[className];
-        cls.apply(self);
+        var cls = nS.__classes[className];
+        cls.call(self);
         
-        var newFuncs = sW.Class.grabNewFuncs(oldVars, self);
+        var newFuncs = nS.grabNewFuncs(oldVars, self);
         for (var i=0; i<newFuncs.length; i++){
             var oldFunc = oldVars[newFuncs[i]];
-            sW.Class.MakeSuper(self, className, newFuncs[i], oldFunc);
+            nS.MakeSuper(self, className, newFuncs[i], oldFunc);
         }
     }
 
-    this.Class = function(){
+    nS.Class = function(){
         //takes two or three arguments:
         //  first is always the Class Name (string);
         //  second is optional, and an array of Class Names to inherit
@@ -109,7 +113,8 @@ sW.Module.define('sW.Class', function(){
             throw new TypeError('Wrong number of arguments!');
         }
 
-        sW.Class.__classes[__className] = function(){
+        // nS.__classes[__className] = function(){
+        var definition = function(){
             //constants, some only created if needed
 
             // __className - set after applying parents so it is correct
@@ -144,13 +149,6 @@ sW.Module.define('sW.Class', function(){
                     }
 
                     //TODO: currently we are throwing all parents onto the same list - but want a real tree
-
-                    // //check if any parent is instanceOf(cls)
-                    // for (var i=0; i<this.__parents.length; i++){
-                    //     if (this.__parents[i].instanceOf(cls)){
-                    //         return true;
-                    //     }
-                    // }
                 }
 
                 return false;
@@ -249,21 +247,23 @@ sW.Module.define('sW.Class', function(){
                     if (typeof inh.__className != 'undefined'){
                         inh = inh.__className;
                     }
-                    sW.Class.Inherit(inh, this);
+                    nS.Inherit(inh, this);
                     this.__parents.push(inh);
                 }
             }
 
-            __definition.apply(this);
-
             this.__className = __className;
+
+            __definition.apply(this);
             
             this.init.apply(this, arguments);
         }
 
         //store the __className on the definition as well, so it is there for comparisons
-        this.__classes[__className].__className = __className;
+        definition.__className = __className;
 
-        return this.__classes[__className];
+        // nS.__classes[__className] = definition;
+
+        return definition;
     }
 });
