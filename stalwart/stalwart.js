@@ -248,15 +248,17 @@ sW.Module.includeNext = function(script_path){
     }
 }
 
-//bind a trigger on module load to load the next module if any
-sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
+sW.Module.injectNextModule = function(){
     if (sW.Module.__queuedModules.length){
         var cur = sW.Module.__queuedModules.shift();
         sW.Module.injectScript(cur);
     } else {
         sW.Trigger.fire(sW.Module.__afterAllLoadTrigger);
     }
-});
+}
+
+//bind a trigger on module load to load the next module if any
+sW.Trigger.on(sW.Module.__afterLoadTrigger, sW.Module.injectNextModule);
 
 sW.Module.define = function(name, definition){
     //use to begin defining a module
@@ -410,12 +412,11 @@ sW.init = function(){
 
     var path = sW.rootPath();
 
-    var prereqs = [path+'defaults.js',
-               path+'utils.js',
-               path+'class.js'];
-    prereqs = prereqs.concat(userPrereqs);
+    if (!sW.Module.definedModule('sW.Defaults')) sW.Module.include(path+'defaults.js');
+    if (!sW.Module.definedModule('sW.Utils')) sW.Module.include(path+'utils.js');
+    if (!sW.Module.definedModule('sW.Class')) sW.Module.include(path+'class.js');
 
-    $.each(prereqs, function(i, req){
+    $.each(userPrereqs, function(i, req){
         sW.Module.include(req);
     });
 

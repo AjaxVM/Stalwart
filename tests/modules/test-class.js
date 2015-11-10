@@ -160,7 +160,6 @@ sW.afterInit(function(){
 
         //6,7)
         var myCatDog = new CatDog('Weirdo', 1);
-        console.log(myCatDog);
         QUnit.ok(myCatDog.instanceOf(Dog));
         QUnit.ok(myCatDog.instanceOf(Cat));
 
