@@ -186,10 +186,46 @@ sW.afterInit(function(){
         //this leads to chaseAMouse (from Cat) referencing die (from Dog)
         //this could be changed to redefine die as function(reason){this.__super('Cat.die', [reason]);}
         QUnit.equal(myCatDog.deathReason, 'Weirdo (Dog) died because of: Boredom');
+    });
+
+    QUnit.test('Class instantation time compare', function(){
+        var Dog = sW.Class.Class('Dog', function(){
+            this.init = function(age){
+                this.age = age;
+                this.name = 'Jake';
+                this.happy = false;
+            }
+
+            this.playFetch = function(){
+                this.happy = true;
+            }
+        });
+
+        QUnit.ok(true, 'Dog defined');
+
+        var ProtoDog = function(age){
+            this.age = age;
+            this.name = 'ProtoJake';
+        }
+        ProtoDog.prototype.playFetch = function(){
+            this.happy = true;
+        }
+
+        QUnit.ok(true, 'ProtoDog defined');
 
         for (var i=0; i<10000; i++){
-            var something = new CatDog('Hello'+i, 'female');
+            var a = new Dog(34);
+            a.playFetch();
         }
+
+        QUnit.ok(true, '10,000 dogs made');
+
+        for (var i=0; i<10000; i++){
+            var a = new ProtoDog(34);
+            a.playFetch();
+        }
+
+        QUnit.ok(true, '10,000 protodogs made');
     });
 
 });

@@ -98,6 +98,7 @@ sW.Module.define('sW.Class', function(){
     //perhaps this.method = this.prototype.method (if undefined) - might save a bit?
     //currently this takes about 550ms to instantiate 10,000 CatDogs (from unit test)
     //    We should be able to make that much faster, hopefully
+    //Comparing basic classes (no inheritance) speed was similar across 10,000 objects vs prototype
 
     nS.Class = function(){
         //takes two or three arguments:
