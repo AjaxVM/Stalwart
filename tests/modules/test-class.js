@@ -212,6 +212,8 @@ sW.afterInit(function(){
 
         QUnit.ok(true, 'ProtoDog defined');
 
+        //TODO: this is like 20-30x slower than prototype, how to fix that?
+
         for (var i=0; i<10000; i++){
             var a = new Dog(34);
             a.playFetch();
