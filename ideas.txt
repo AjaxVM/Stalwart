@@ -1,3 +1,8 @@
 
 Currently we are having a slight issue where sometimes sW.Defaults is not loading.
 I think it is transient and due to the local file testing we have at present, but need to keep an eye on it.
+
+
+Change how classes work to use prototyping under the hood
+Pass in an object with values/functions that are then assigned as prototypes.
+Anything you inherit will have wrapper functions created that apply that function (with arguments) - and you can overwrite and reference back with Parent.prototype.call(this, **args);
