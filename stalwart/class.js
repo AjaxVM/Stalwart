@@ -295,4 +295,90 @@ sW.Module.define('sW.Class', function(){
 
         return definition;
     }
+
+    nS.Class2 = function(){
+        var __definition = null;
+        var __className = null;
+        var __inherits = null;
+        if (arguments.length == 2){
+            __className = arguments[0];
+            __definition = arguments[1];
+        } else if (arguments.length == 3){
+            __className = arguments[0];
+            __inherits = arguments[1];
+            __definition = arguments[2];
+        } else {
+            throw new TypeError('Wrong number of arguments!');
+        }
+
+        var __exposes = [];
+
+        if (!__definition.prototype.hasOwnProperty('expose')){
+            __definition.prototype.expose = function(property){
+                __exposes.push(property);
+            }
+        }
+
+        var definition = new __definition();
+        definition.__parents = [];
+        definition.__exposes = __exposes;
+        definition.__className = __className;
+
+        //TODO is there a faster (or cleaner if not much slower) way to handle super than Parent.prototype.func.call(this, arg1, arg2...)?????
+        //unfortunately I think I am just trying to make something pretty that already is clear and very fast
+        //might be able to be a bit faster if we add a definition.$ = {__className: Class} and call: this.$.Class.func.call(self, arg1, arg2) - but we use more memory and aren't any clearer
+
+        //var sWClassObject = Object.create(__definition);
+        if (__inherits){
+            for (var i=__inherits.length-1; i >= 0; i--){
+                var inheritp = __inherits[i].prototype;
+                definition.__parents.push(inheritp);
+                for (var k in inheritp){
+                    if (!definition.hasOwnProperty(k)){
+                        definition[k] = inheritp[k];
+                    } else if (k=='__exposes'){
+                        $.each(inheritp[k], function(key, value){
+                            if (definition.__exposes.indexOf(key) == -1){
+                                definition.__exposes.push(key);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        // for (var i=0; i<__exposes.length; i++){
+        //     var key = __exposes[i];
+        //     definition.__exposed[key] = definition[key];
+        //     Object.defineProperty(definition, key, {
+        //         get: function(){
+        //             return this.__exposed[key];
+        //         },
+        //         set: function(value){
+        //             console.log(this.__className, 'set key "'+key+'" to value "'+value+'"');
+        //             this.__exposed[key] = value;
+        //         }
+        //     });
+        // }
+
+        var sWClassObject = function(){
+            this.__exposed = [];
+            var cls = this;
+            $.each(definition.__exposes, function(index, key){
+                console.log(index, key, definition.__exposes);
+                cls.__exposed[key] = cls[key];
+                Object.defineProperty(cls, key, {
+                    get: function(){ return cls.__exposed[key] },
+                    set: function(value){ cls.__exposed[key] = value; }
+                });
+            });
+            if (this.init){
+                this.init.apply(this, arguments);
+            }
+        }
+        sWClassObject.prototype = definition;
+        sWClassObject.prototype.constructor = sWClassObject;
+
+        return sWClassObject;
+    }
 });

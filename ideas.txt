@@ -1,6 +1,7 @@
 
 Currently we are having a slight issue where sometimes sW.Defaults is not loading.
 I think it is transient and due to the local file testing we have at present, but need to keep an eye on it.
+It happens a lot after multiple page refreshes - not sure why the define from Defaults is not setting it loaded before it loads utils
 
 
 Change how classes work to use prototyping under the hood
