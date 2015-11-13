@@ -315,36 +315,7 @@ sW.Module.define('sW.Class', function(){
         definition.__parents = [];
         definition.__className = __className;
 
-        //TODO is there a faster (or cleaner if not much slower) way to handle super than Parent.prototype.func.call(this, arg1, arg2...)?????
-        //unfortunately I think I am just trying to make something pretty that already is clear and very fast
-        //might be able to be a bit faster if we add a definition.$ = {__className: Class} and call: this.$.Class.func.call(self, arg1, arg2) - but we use more memory and aren't any clearer
-
-        //var sWClassObject = Object.create(__definition);
-        if (__inherits){
-            for (var i=__inherits.length-1; i >= 0; i--){
-                var inheritp = __inherits[i].prototype;
-                definition.__parents.push(inheritp);
-                for (var k in inheritp){
-                    if (!definition.hasOwnProperty(k)){
-                        definition[k] = inheritp[k];
-                    } else if (k == '__exposes'){
-                        //merge them in
-                        for (var j=0; j<inheritp[k].length; j++){
-                            definition.expose(inheritp[k][j]);
-                        }
-                    }
-                }
-            }
-        }
-
-        var sWClassObject = function(){
-            if (this.__init__){
-                this.__init__.apply(this, arguments);
-            }
-        }
-        sWClassObject.prototype = definition;
-        sWClassObject.prototype.constructor = sWClassObject;
-        sWClassObject.prototype.__setExposed__ = function(prop, value){
+        definition.__setExposed__ = function(prop, value){
             if (this.__watchers__ && this.__watchers__[prop]){
                 var oldValue = this.__exposed__[prop];
                 for (var i=0; i<this.__watchers__[prop]; i++){
@@ -353,10 +324,10 @@ sW.Module.define('sW.Class', function(){
             }
             this.__exposed__[prop] = value;
         }
-        sWClassObject.prototype.__getExposed__ = function(prop){
+        definition.__getExposed__ = function(prop){
             return this.__exposed__[prop];
         }
-        sWClassObject.prototype.expose = function(){
+        definition.expose = function(){
             //makes a variable exposes
             //this means it will check either __getattr__(variable) or __get_[variable]__() (or set version, add value param)
             //use __getExposed__ (or set) inside these functions to utilize the internal tools for handling the properties
@@ -389,7 +360,7 @@ sW.Module.define('sW.Class', function(){
                 });
             });
         }
-        sWClassObject.prototype.watch = function(variable, callback){
+        definition.watch = function(variable, callback){
             //attaches callback to fire whenever variable is updated
             //variable must be exposed before assigning watches
             //returns function that deregisters watch
@@ -420,6 +391,36 @@ sW.Module.define('sW.Class', function(){
 
             return removeWatcher;
         }
+
+        //TODO is there a faster (or cleaner if not much slower) way to handle super than Parent.prototype.func.call(this, arg1, arg2...)?????
+        //unfortunately I think I am just trying to make something pretty that already is clear and very fast
+        //might be able to be a bit faster if we add a definition.$ = {__className: Class} and call: this.$.Class.func.call(self, arg1, arg2) - but we use more memory and aren't any clearer
+
+        //var sWClassObject = Object.create(__definition);
+        if (__inherits){
+            for (var i=__inherits.length-1; i >= 0; i--){
+                var inheritp = __inherits[i].prototype;
+                definition.__parents.push(inheritp);
+                for (var k in inheritp){
+                    if (!definition.hasOwnProperty(k)){
+                        definition[k] = inheritp[k];
+                    } else if (k == '__exposes'){
+                        //merge them in
+                        for (var j=0; j<inheritp[k].length; j++){
+                            definition.expose(inheritp[k][j]);
+                        }
+                    }
+                }
+            }
+        }
+
+        var sWClassObject = function(){
+            if (this.__init__){
+                this.__init__.apply(this, arguments);
+            }
+        }
+        sWClassObject.prototype = definition;
+        sWClassObject.prototype.constructor = sWClassObject;
 
         return sWClassObject;
     }

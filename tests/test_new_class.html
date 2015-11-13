@@ -72,8 +72,7 @@
 
           this.__setattr__ = function(prop, value){
             console.log('Setting "'+prop+'" (should never be "height") to value "'+value+'"');
-
-            console.log(this.__setExposed__, this.__getExposed__);
+            console.log('psych, not really setting');
           }
 
           this.__getattr__ = function(prop){
