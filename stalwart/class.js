@@ -370,10 +370,12 @@ sW.Module.define('sW.Class', function(){
                 cls.__exposed__[prop] = cls[prop];
 
                 Object.defineProperty(cls, prop, {
+                    //make sure to use getter/setter.call since we are getting them by lookup so
+                    //they aren't scoped to "this" properly :/
                     get: function(){
                         var getter = cls['__get_'+prop+'__'];
                         if (getter){
-                            return getter();
+                            return getter.call(cls);
                         }
                         return cls.__getattr__ ? cls.__getattr__(prop) : cls.__getExposed__(prop);
                     },
