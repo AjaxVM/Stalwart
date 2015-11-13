@@ -311,17 +311,8 @@ sW.Module.define('sW.Class', function(){
             throw new TypeError('Wrong number of arguments!');
         }
 
-        var __exposes = [];
-
-        if (!__definition.prototype.hasOwnProperty('expose')){
-            __definition.prototype.expose = function(property){
-                __exposes.push(property);
-            }
-        }
-
         var definition = new __definition();
         definition.__parents = [];
-        definition.__exposes = __exposes;
         definition.__className = __className;
 
         //TODO is there a faster (or cleaner if not much slower) way to handle super than Parent.prototype.func.call(this, arg1, arg2...)?????
@@ -336,48 +327,97 @@ sW.Module.define('sW.Class', function(){
                 for (var k in inheritp){
                     if (!definition.hasOwnProperty(k)){
                         definition[k] = inheritp[k];
-                    } else if (k=='__exposes'){
-                        $.each(inheritp[k], function(key, value){
-                            if (definition.__exposes.indexOf(key) == -1){
-                                definition.__exposes.push(key);
-                            }
-                        });
+                    } else if (k == '__exposes'){
+                        //merge them in
+                        for (var j=0; j<inheritp[k].length; j++){
+                            definition.expose(inheritp[k][j]);
+                        }
                     }
                 }
             }
         }
 
-        // for (var i=0; i<__exposes.length; i++){
-        //     var key = __exposes[i];
-        //     definition.__exposed[key] = definition[key];
-        //     Object.defineProperty(definition, key, {
-        //         get: function(){
-        //             return this.__exposed[key];
-        //         },
-        //         set: function(value){
-        //             console.log(this.__className, 'set key "'+key+'" to value "'+value+'"');
-        //             this.__exposed[key] = value;
-        //         }
-        //     });
-        // }
-
         var sWClassObject = function(){
-            this.__exposed = [];
-            var cls = this;
-            $.each(definition.__exposes, function(index, key){
-                console.log(index, key, definition.__exposes);
-                cls.__exposed[key] = cls[key];
-                Object.defineProperty(cls, key, {
-                    get: function(){ return cls.__exposed[key] },
-                    set: function(value){ cls.__exposed[key] = value; }
-                });
-            });
-            if (this.init){
-                this.init.apply(this, arguments);
+            if (this.__init__){
+                this.__init__.apply(this, arguments);
             }
         }
         sWClassObject.prototype = definition;
         sWClassObject.prototype.constructor = sWClassObject;
+        sWClassObject.prototype.__setExposed__ = function(prop, value){
+            if (this.__watchers__ && this.__watchers__[prop]){
+                var oldValue = this.__exposed__[prop];
+                for (var i=0; i<this.__watchers__[prop]; i++){
+                    this.__watchers__[prop][i](value, oldValue);
+                }
+            }
+            this.__exposed__[prop] = value;
+        }
+        sWClassObject.prototype.__getExposed__ = function(prop){
+            return this.__exposed__[prop];
+        }
+        sWClassObject.prototype.expose = function(){
+            //makes a variable exposes
+            //this means it will check either __getattr__(variable) or __get_[variable]__() (or set version, add value param)
+            //use __getExposed__ (or set) inside these functions to utilize the internal tools for handling the properties
+            //If neither of those methods are defined, it will do the default
+            //default will check if there are any watchers  on the variable, and fire them
+            var cls = this;
+            if (typeof this.__exposed__ == 'undefined'){
+                this.__exposed__ = {};
+            }
+            $.each(arguments, function(i, prop){
+                cls.__exposed__[prop] = cls[prop];
+
+                Object.defineProperty(cls, prop, {
+                    get: function(){
+                        var getter = cls['__get_'+prop+'__'];
+                        if (getter){
+                            return getter();
+                        }
+                        return cls.__getattr__ ? cls.__getattr__(prop) : cls.__getExposed__(prop);
+                    },
+                    set: function(value){
+                        var setter = cls['__set_'+prop+'__'];
+                        if (setter){
+                            return setter.call(cls, value);
+                        }
+                        return cls.__setattr__ ? cls.__setattr__(prop, value) : cls.__setExposed__(prop, value);
+                    }
+                });
+            });
+        }
+        sWClassObject.prototype.watch = function(variable, callback){
+            //attaches callback to fire whenever variable is updated
+            //variable must be exposed before assigning watches
+            //returns function that deregisters watch
+            //callback should take args (newValue, oldValue)
+
+            if (!this.__exposed__.hasOwnProperty(variable)){
+                throw new AttributeError('Can only watch variables that are exposed');
+            }
+
+            if (typeof this.__watchers__ == 'undefined'){
+                this.__watchers__ = {};
+            }
+
+            if (typeof this.__watchers__[variable] == 'undefined'){
+                this.__watchers__[variable] = [];
+            }
+
+            this.__watchers__[variable].push(callback);
+
+            //remove only first instance - in case things have attached multiple times for some reason
+            var cls = this;
+            var removeWatcher = function(){
+                var index = cls.__watchers__[variable].indexOf(callback);
+                if (index > -1){
+                    cls.__watchers__[variable].splice(index, 1);
+                }
+            }
+
+            return removeWatcher;
+        }
 
         return sWClassObject;
     }

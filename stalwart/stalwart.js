@@ -19,6 +19,7 @@
     __var = private/internal variable which should not be exposed directly
             no guarantee is ever made that this will remain consistent between versions
     _var = semi-private variable - this should be safe to reference but shouldn't if avoidable
+    __var__ = private member of a Class - should only be used internally of that Class
 */
 
 'use strict';
