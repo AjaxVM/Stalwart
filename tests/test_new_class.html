@@ -9,6 +9,7 @@
     <script type='text/javascript'>
       sW.init(function(){
         var Animal = sW.Class.Class2('Animal', function(){
+          this.__public__ = ['age', 'alive'];
           this.id = 0
           this.__init__ = function(animalType, name, age){
             this.animalType = animalType;
@@ -20,7 +21,7 @@
 
             this.alive = true;
 
-            this.expose('age', 'alive');
+            // this.expose('age', 'alive');
           }
           this.grow = function(years){
             this.age += years;
@@ -31,11 +32,22 @@
           this.__init__ = function(name, age){
             Animal.prototype.__init__.call(this, 'Canine', name, age);
 
-            this.expose('echo');
+            // this.expose('echo');
           }
         });
 
         var Person = sW.Class.Class2('Person', [Animal], function(){
+
+          this.__public__ = [
+            'height', 
+            'happiness',
+            'hunger',
+            'thirst',
+            'speed',
+            'strength',
+            'endurance',
+            'intelligence'];
+
           this.__init__ = function(name){
             Animal.prototype.__init__.call(this, 'Homo Sapien', name, 21);
 
@@ -49,18 +61,18 @@
             this.endurance = 5;
             this.intelligence = 5;
 
-            this.expose(
-                'height',
-                'happiness',
-                'hunger',
-                'thirst',
-                'speed',
-                'strength',
-                'endurance',
-                'intelligence');
+            // this.expose(
+            //     'height',
+            //     'happiness',
+            //     'hunger',
+            //     'thirst',
+            //     'speed',
+            //     'strength',
+            //     'endurance',
+            //     'intelligence');
           }
 
-          this.__set_height__ = function(value){
+          this.__setHeight__ = function(value){
             if (value > 0){
               console.log("I'm grooooowiiiiiing!");
             } else {
@@ -70,12 +82,11 @@
             this.__setExposed__('height', value);
           }
 
-          this.__setattr__ = function(prop, value){
-            console.log('Setting "'+prop+'" (should never be "height") to value "'+value+'"');
-            console.log('psych, not really setting');
+          this.__setAttr__ = function(prop, value){
+            console.log('Setting "'+prop+'" (should never be "height") to value "'+value+'" ... Psych not doing anything!!!');
           }
 
-          this.__getattr__ = function(prop){
+          this.__getAttr__ = function(prop){
             console.log('Getting "'+prop+'" - should be anything exposed!');
             return 'unicorn!('+this.__getExposed__(prop)+')';
           }
@@ -95,15 +106,21 @@
         bobby.speed = 7;
         console.log(bobby.height, bobby.speed);
 
+
+        //10k objects
+        //no exposing: 1.67ms
+        //exposing just Person: 180ms
+        //exposing Person/Animal: 260ms
+
         // start = performance.now();
-        // for (var i=0; i<=1000000; i++){
-        //   var c = new Dog('asasd', 1);
+        // for (var i=0; i<=10000; i++){
+        //   var c = new Person('asasd', 1);
         //   c.grow(1);
         // }
         // end = performance.now();
 
         // console.log(c);
-        // console.log('1million took '+(end-start)+' milliseconds');
+        // console.log('10 thousand took '+(end-start)+' milliseconds');
       });
     </script>
     

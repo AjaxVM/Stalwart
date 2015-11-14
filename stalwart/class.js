@@ -37,6 +37,8 @@
 
 'use strict';
 
+sW.Module.require('sW.Utils');
+
 sW.Module.define('sW.Class', function(){
     var nS = this; //reference nameSpace for the sub functions
 
@@ -327,39 +329,47 @@ sW.Module.define('sW.Class', function(){
         definition.__getExposed__ = function(prop){
             return this.__exposed__[prop];
         }
-        definition.expose = function(){
-            //makes a variable exposes
-            //this means it will check either __getattr__(variable) or __get_[variable]__() (or set version, add value param)
-            //use __getExposed__ (or set) inside these functions to utilize the internal tools for handling the properties
-            //If neither of those methods are defined, it will do the default
-            //default will check if there are any watchers  on the variable, and fire them
-            var cls = this;
-            if (typeof this.__exposed__ == 'undefined'){
-                this.__exposed__ = {};
-            }
-            $.each(arguments, function(i, prop){
-                cls.__exposed__[prop] = cls[prop];
 
-                Object.defineProperty(cls, prop, {
-                    //make sure to use getter/setter.call since we are getting them by lookup so
-                    //they aren't scoped to "this" properly :/
-                    get: function(){
-                        var getter = cls['__get_'+prop+'__'];
-                        if (getter){
-                            return getter.call(cls);
-                        }
-                        return cls.__getattr__ ? cls.__getattr__(prop) : cls.__getExposed__(prop);
-                    },
-                    set: function(value){
-                        var setter = cls['__set_'+prop+'__'];
-                        if (setter){
-                            return setter.call(cls, value);
-                        }
-                        return cls.__setattr__ ? cls.__setattr__(prop, value) : cls.__setExposed__(prop, value);
-                    }
-                });
-            });
-        }
+        // THIS method is far slower than I want to use, since it is not leveraging prototype at all
+
+        
+        // definition.expose = function(){
+        //     //makes a variable exposes
+        //     //this means it will check either __getattr__(variable) or __get_[variable]__() (or set version, add value param)
+        //     //use __getExposed__ (or set) inside these functions to utilize the internal tools for handling the properties
+        //     //If neither of those methods are defined, it will do the default
+        //     //default will check if there are any watchers  on the variable, and fire them
+        //     var cls = this;
+        //     if (typeof this.__exposed__ == 'undefined'){
+        //         this.__exposed__ = {};
+        //     }
+
+        //     // var propCache = {};
+        //     for (var i=0; i<arguments.length; i++){
+        //         var prop = arguments[i];
+        //         cls.__exposed__[prop] = cls[prop];
+
+        //         propCache[prop] = {
+        //             //make sure to use getter/setter.call since we are getting them by lookup so
+        //             //they aren't scoped to "this" properly :/
+        //             get: function(){
+        //                 var getter = cls['__get_'+prop+'__'];
+        //                 if (getter){
+        //                     return getter.call(cls);
+        //                 }
+        //                 return cls.__getattr__ ? cls.__getattr__(prop) : cls.__getExposed__(prop);
+        //             },
+        //             set: function(value){
+        //                 var setter = cls['__set_'+prop+'__'];
+        //                 if (setter){
+        //                     return setter.call(cls, value);
+        //                 }
+        //                 return cls.__setattr__ ? cls.__setattr__(prop, value) : cls.__setExposed__(prop, value);
+        //             }
+        //         }
+        //     }
+        //     // Object.defineProperties(cls, propCache);
+        // }
         definition.watch = function(variable, callback){
             //attaches callback to fire whenever variable is updated
             //variable must be exposed before assigning watches
@@ -396,25 +406,68 @@ sW.Module.define('sW.Class', function(){
         //unfortunately I think I am just trying to make something pretty that already is clear and very fast
         //might be able to be a bit faster if we add a definition.$ = {__className: Class} and call: this.$.Class.func.call(self, arg1, arg2) - but we use more memory and aren't any clearer
 
-        //var sWClassObject = Object.create(__definition);
+        var sWClassObject = Object.create(__definition);
         if (__inherits){
             for (var i=__inherits.length-1; i >= 0; i--){
                 var inheritp = __inherits[i].prototype;
                 definition.__parents.push(inheritp);
                 for (var k in inheritp){
+                    if (inheritp.__public__.indexOf(k) > -1){
+                        continue;
+                    }
                     if (!definition.hasOwnProperty(k)){
                         definition[k] = inheritp[k];
-                    } else if (k == '__exposes'){
-                        //merge them in
+                    } else if (k == '__public__') {
+                        //expand public values so this inherits properly
                         for (var j=0; j<inheritp[k].length; j++){
-                            definition.expose(inheritp[k][j]);
+                            definition.__public__.push(inheritp[k][j]);
                         }
                     }
                 }
             }
         }
 
+        if (definition.__public__){
+            //ensure definition.__public__ has only unique values
+            definition.__public__ = definition.__public__.filter(function(value, index, cls){
+                return cls.indexOf(value) === index;
+            });
+
+            //now create the getters and setters for the public properties
+            for (var i=0; i<definition.__public__.length; i++){
+                var prop = definition.__public__[i];
+                var getPropCustom = '__get'+sW.Utils.capitalize(prop)+'__';
+                var setPropCustom = '__set'+sW.Utils.capitalize(prop)+'__';
+                // THESE funcs aren't binding properly, they are binding all public vars
+                // to the last defined set/get funcs...
+
+
+                // var propGetter = function(){
+                //     var getter = this[getPropCustom];
+                //     console.log('get', prop);
+                //     if (getter){
+                //         return getter.call(this);
+                //     }
+                //     return this.__getAttr__ ? this.__getAttr__(prop) : this.__getExposed__(prop);
+                // }
+                // var propSetter = function(value){
+                //     var setter = this[setPropCustom];
+                //     console.log('set', prop, value);
+                //     if (setter){
+                //         return setter.call(this, value);
+                //     }
+                //     return this.__setAttr__ ? this.__setAttr__(prop, value) : this.__setExposed__(prop, value);
+                // }
+
+                eval.call(this,"var propGetter = function(){var getter = this."+getPropCustom+";if (getter){return getter.call(this);};return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
+                eval.call(this,"var propSetter = function(value){var setter = this."+setPropCustom+";if (setter){return setter.call(this, value);};return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
+                definition.__defineGetter__(prop, propGetter);
+                definition.__defineSetter__(prop, propSetter);
+            }
+        }
+
         var sWClassObject = function(){
+            this.__exposed__ = {};
             if (this.__init__){
                 this.__init__.apply(this, arguments);
             }
