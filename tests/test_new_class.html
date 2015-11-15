@@ -48,6 +48,8 @@
           this.__init__ = function(name){
             Animal.prototype.__init__.call(this, 'Homo Sapien', name, 21);
 
+            //all of these set through our getters/setters since they are on the prototype
+            //hence, only height will have a real value
             this.height = 5.9;
             this.happiness = 50;
             this.hunger = 50;
@@ -96,15 +98,15 @@
 
         //10k objects
 
-        start = performance.now();
-        for (var i=0; i<=10000; i++){
-          var c = new Person('asasd', 1);
-          c.grow(1);
-        }
-        end = performance.now();
+        // start = performance.now();
+        // for (var i=0; i<=10000; i++){
+        //   var c = new Person('asasd', 1);
+        //   c.grow(1);
+        // }
+        // end = performance.now();
 
-        console.log(c);
-        console.log('10 thousand took '+(end-start)+' milliseconds');
+        // console.log(c);
+        // console.log('10 thousand took '+(end-start)+' milliseconds');
       });
     </script>
     
