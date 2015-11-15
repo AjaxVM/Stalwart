@@ -102,7 +102,7 @@ sW.Module.define('sW.Class', function(){
     //    We should be able to make that much faster, hopefully
     //Comparing basic classes (no inheritance) speed was similar across 10,000 objects vs prototype
 
-    nS.Class = function(){
+    nS.ClassOLD = function(){
         //takes two or three arguments:
         //  first is always the Class Name (string);
         //  second is optional, and an array of Class Names to inherit
@@ -298,7 +298,7 @@ sW.Module.define('sW.Class', function(){
         return definition;
     }
 
-    nS.Class2 = function(){
+    nS.Class = function(){
         var __definition = null;
         var __className = null;
         var __inherits = null;
@@ -405,6 +405,19 @@ sW.Module.define('sW.Class', function(){
             return function(){unbind1();unbind2();};
         }
 
+        definition.instanceOf = function(other){
+            //returns true if this is an instance class other, or it inherits from class other
+            if (this.__className == other.__className){
+                return true;
+            }
+            for (var i=0; i<this.__parents.length; i++){
+                if (this.__parents[i].instanceOf(other)){
+                    return true;
+                }
+            }
+            return false;
+        }
+
         //TODO is there a faster (or cleaner if not much slower) way to handle super than Parent.prototype.func.call(this, arg1, arg2...)?????
         //unfortunately I think I am just trying to make something pretty that already is clear and very fast
         //might be able to be a bit faster if we add a definition.$ = {__className: Class} and call: this.$.Class.func.call(self, arg1, arg2) - but we use more memory and aren't any clearer
@@ -415,7 +428,7 @@ sW.Module.define('sW.Class', function(){
                 var inheritp = __inherits[i].prototype;
                 definition.__parents.push(inheritp);
                 for (var k in inheritp){
-                    if (inheritp.__public__.indexOf(k) > -1){
+                    if (inheritp.__public__ && inheritp.__public__.indexOf(k) > -1){
                         continue;
                     }
                     if (!definition.hasOwnProperty(k)){
@@ -462,6 +475,7 @@ sW.Module.define('sW.Class', function(){
         }
         sWClassObject.prototype = definition;
         sWClassObject.prototype.constructor = sWClassObject;
+        sWClassObject.__className = __className;
 
         return sWClassObject;
     }

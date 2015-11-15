@@ -8,13 +8,15 @@
 
     <script type='text/javascript'>
       sW.init(function(){
-        var Animal = sW.Class.Class2('Animal', function(){
+        var Animal = sW.Class.Class('Animal', function(){
           this.__public__ = ['age', 'alive'];
-          this.id = 0
+          this.id = 0;
+
           this.__init__ = function(animalType, name, age){
             this.animalType = animalType;
             this.name = name || 'John Doe';
 
+            //creates a global id, so all Animals (or subs that call Animal.__init__) will have unique id
             this.id = Animal.prototype.id++;
             this.echo = 23;
             this.age = age || 1;
@@ -26,14 +28,14 @@
           }
         });
 
-        var Dog = sW.Class.Class2('Dog', [Animal], function(){
+        var Dog = sW.Class.Class('Dog', [Animal], function(){
           this.__public__ = ['echo'];
           this.__init__ = function(name, age){
             Animal.prototype.__init__.call(this, 'Canine', name, age);
           }
         });
 
-        var Person = sW.Class.Class2('Person', [Animal], function(){
+        var Person = sW.Class.Class('Person', [Animal], function(){
 
           this.__public__ = [
             'height', 
@@ -90,6 +92,8 @@
         var b = new Dog('asdjlh', 12);
         var c = new Dog('hkasd', 15);
 
+        console.log('doggy is animal?', b.instanceOf(Animal), b.instanceOf(Dog));
+
         console.log(a);
         console.log(b);
         console.log(c);
@@ -123,6 +127,16 @@
 
         // console.log(c);
         // console.log('10 thousand took '+(end-start)+' milliseconds');
+
+
+        //try diamond inheritance and instanceOf???
+        var Level1 = sW.Class.Class('Level1', function(){});
+        var Level2a = sW.Class.Class('Level2a', [Level1], function(){});
+        var Level2b = sW.Class.Class('Level2b', [Level1], function(){});
+        var Level3 = sW.Class.Class('Level3', [Level2a, Level2b], function(){});
+
+        var test = new Level3();
+        console.log(test.instanceOf(Level3), test.instanceOf(Level2a), test.instanceOf(Level2b), test.instanceOf(Level1));
       });
     </script>
     

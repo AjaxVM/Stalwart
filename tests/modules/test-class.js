@@ -7,7 +7,7 @@ sW.afterInit(function(){
     QUnit.test('Class definition and instantation', function(){
         QUnit.expect(5);
         var testClass = sW.Class.Class('testClass', function(){
-            this.init = function(name, age){
+            this.__init__ = function(name, age){
                 this.something = 45;
                 this.name = name;
                 this.age = age;
@@ -23,30 +23,47 @@ sW.afterInit(function(){
         QUnit.ok(a.instanceOf(testClass), 'This is an instanceOf testClass');
     });
 
-    QUnit.test('Class attribute exposing', function(){
-        var testClass = sW.Class.Class('testClass', function(){
-            this.init = function(age){
-                this.name = 'John Doe';
-                this.age = age;
-            }
+    QUnit.test('Diamond Inheritance', function(){
+        QUnit.expect(4);
 
-            this.expose('age');
+        var Level1 = sW.Class.Class('Level1', function(){});
+        var Level2a = sW.Class.Class('Level2a', [Level1], function(){});
+        var Level2b = sW.Class.Class('Level2b', [Level1], function(){});
+        var Level3 = sW.Class.Class('Level3', [Level2a, Level2b], function(){});
+
+        var test = new Level3();
+
+        QUnit.equal(test.instanceOf(Level1), true);
+        QUnit.equal(test.instanceOf(Level2a), true);
+        QUnit.equal(test.instanceOf(Level2b), true);
+        QUnit.equal(test.instanceOf(Level3), true);
+    });
+
+    QUnit.test('Class attribute exposing/setting', function(){
+        QUnit.expect(3);
+
+        var testClass = sW.Class.Class('testClass', function(){
+            this.__public__ = ['age'];
+
+            this.__setAttr__ = function(attr, value){
+                //this only fires for age, so we should equal expected 3 tests
+                QUnit.ok(true, 'setAttr');
+                this.__setExposed__(attr, value+' psych!');
+            }
         });
 
-        var a = new testClass(24);
+        var a = new testClass();
 
-        QUnit.ok(typeof a.getAge != 'undefined', 'getAge added from expose');
-        QUnit.ok(typeof a.setAge != 'undefined', 'setAge added from expose');
+        a.age = 23;
+        a.name = 'John Doe';
 
-        a.setAge(45);
-
-        QUnit.equal(a.age, a.getAge());
-        QUnit.equal(a.age, 45);
+        QUnit.equal(a.age, '23 psych!');
+        QUnit.equal(a.name, 'John Doe');
     });
 
     QUnit.test('Class Inheritance', function(){
         var Animal = sW.Class.Class('Animal', function(){
-            this.init = function(animalType, lifespan, sex){
+            this.__init__ = function(animalType, lifespan, sex){
                 this.animalType = animalType;
                 this.lifespan = lifespan;
                 this.sex = sex;
@@ -94,13 +111,15 @@ sW.afterInit(function(){
         });
 
         var Dog = sW.Class.Class('Dog', [Animal], function(){
-            this.init = function(name, sex){
-                this.__super('Animal.init', ['Canine', 15, sex]);
+            this.__init__ = function(name, sex){
+                //this.__super('Animal.init', ['Canine', 15, sex]);
+                Animal.prototype.__init__.call(this, 'Canine', 15, sex);
                 this.name = name;
             }
 
             this.die = function(reason){
-                this.__super('Animal.die');
+                //this.__super('Animal.die');
+                Animal.prototype.die.call(this);
                 if (reason){
                     this.deathReason = this.name+' (Dog) died because of: '+reason;
                 }
@@ -113,14 +132,16 @@ sW.afterInit(function(){
         });
 
         var Cat = sW.Class.Class('Cat', [Animal], function(){
-            this.init = function(name, sex){
-                this.__super('Animal.init', ['Feline', 20, sex]);
+            this.__init__ = function(name, sex){
+                //this.__super('Animal.init', ['Feline', 20, sex]);
+                Animal.prototype.__init__.call(this, Feline, 20, sex);
                 this.name = name;
                 this.bored = 0;
             }
 
             this.die = function(reason){
-                this.__super('Animal.die');
+                //this.__super('Animal.die');
+                Animal.prototype.die.call(this);
                 if (reason){
                     this.deathReason = this.name+' (Cat) died because of: '+reason;
                 }
@@ -137,9 +158,10 @@ sW.afterInit(function(){
         });
 
         var CatDog = sW.Class.Class('CatDog', [Cat, Dog], function(){
-            this.init = function(name, sex){
+            this.__init__ = function(name, sex){
                 //only calling super on Animal to test it, and so we don't call it 3 times (if we super all inits)
-                this.__super('Animal.init', ['CatDog', 15, sex]);
+                //this.__super('Animal.init', ['CatDog', 15, sex]);
+                Animal.prototype.__init__.call(this, 'CatDog', 15, sex);
                 this.name = name;
                 this.bored = 0;
             }
