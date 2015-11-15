@@ -330,46 +330,6 @@ sW.Module.define('sW.Class', function(){
             return this.__exposed__[prop];
         }
 
-        // THIS method is far slower than I want to use, since it is not leveraging prototype at all
-
-        
-        // definition.expose = function(){
-        //     //makes a variable exposes
-        //     //this means it will check either __getattr__(variable) or __get_[variable]__() (or set version, add value param)
-        //     //use __getExposed__ (or set) inside these functions to utilize the internal tools for handling the properties
-        //     //If neither of those methods are defined, it will do the default
-        //     //default will check if there are any watchers  on the variable, and fire them
-        //     var cls = this;
-        //     if (typeof this.__exposed__ == 'undefined'){
-        //         this.__exposed__ = {};
-        //     }
-
-        //     // var propCache = {};
-        //     for (var i=0; i<arguments.length; i++){
-        //         var prop = arguments[i];
-        //         cls.__exposed__[prop] = cls[prop];
-
-        //         propCache[prop] = {
-        //             //make sure to use getter/setter.call since we are getting them by lookup so
-        //             //they aren't scoped to "this" properly :/
-        //             get: function(){
-        //                 var getter = cls['__get_'+prop+'__'];
-        //                 if (getter){
-        //                     return getter.call(cls);
-        //                 }
-        //                 return cls.__getattr__ ? cls.__getattr__(prop) : cls.__getExposed__(prop);
-        //             },
-        //             set: function(value){
-        //                 var setter = cls['__set_'+prop+'__'];
-        //                 if (setter){
-        //                     return setter.call(cls, value);
-        //                 }
-        //                 return cls.__setattr__ ? cls.__setattr__(prop, value) : cls.__setExposed__(prop, value);
-        //             }
-        //         }
-        //     }
-        //     // Object.defineProperties(cls, propCache);
-        // }
         definition.watch = function(variable, callback){
             //attaches callback to fire whenever variable is updated
             //variable must be exposed before assigning watches
@@ -438,33 +398,14 @@ sW.Module.define('sW.Class', function(){
                 var prop = definition.__public__[i];
                 var getPropCustom = '__getAttr'+sW.Utils.capitalize(prop)+'__';
                 var setPropCustom = '__setAttr'+sW.Utils.capitalize(prop)+'__';
-                // THESE funcs aren't binding properly, they are binding all public vars
-                // to the last defined set/get funcs...
-
-
-                // var propGetter = function(){
-                //     var getter = this[getPropCustom];
-                //     console.log('get', prop);
-                //     if (getter){
-                //         return getter.call(this);
-                //     }
-                //     return this.__getAttr__ ? this.__getAttr__(prop) : this.__getExposed__(prop);
-                // }
-                // var propSetter = function(value){
-                //     var setter = this[setPropCustom];
-                //     console.log('set', prop, value);
-                //     if (setter){
-                //         return setter.call(this, value);
-                //     }
-                //     return this.__setAttr__ ? this.__setAttr__(prop, value) : this.__setExposed__(prop, value);
-                // }
-
-
                 // THIS method works for keeping scope properly and everything works
-                // this is also nearly as fast as Classes without any exposing, and is on prototype
+                // this is also nearly as fast as Classes without any exposing, and is on prototype.
+                // The thing is, just defining functions with closures around prop is failing
+                // setting one of these props sets all somehow - hence the need to eval them :/
+
                 // If that is the case - do we need to clean the props to make sure they are safe?
-                // but then, how safe does it have to be?
-                // currently everything is looking up the prop via this[prop] - so it should be safe with any keys
+                // But then, how safe does it have to be?
+                // Currently everything is looking up the prop via this[prop] - so it should be safe with any keys
                 // the only funky one is it is looking for this["__getAttrProp__"] - so weird characters would mean
                 // defining the variable as a string to make it work
                 eval.call(this,"var propGetter = function(){"+

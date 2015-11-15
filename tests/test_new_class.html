@@ -20,8 +20,6 @@
             this.age = age || 1;
 
             this.alive = true;
-
-            // this.expose('age', 'alive');
           }
           this.grow = function(years){
             this.age += years;
@@ -32,8 +30,6 @@
           this.__public__ = ['echo'];
           this.__init__ = function(name, age){
             Animal.prototype.__init__.call(this, 'Canine', name, age);
-
-            // this.expose('echo');
           }
         });
 
@@ -61,36 +57,26 @@
             this.strength = 5;
             this.endurance = 5;
             this.intelligence = 5;
-
-            // this.expose(
-            //     'height',
-            //     'happiness',
-            //     'hunger',
-            //     'thirst',
-            //     'speed',
-            //     'strength',
-            //     'endurance',
-            //     'intelligence');
           }
 
-          // this.__setAttrHeight__ = function(value){
-          //   if (value > 0){
-          //     console.log("I'm grooooowiiiiiing!");
-          //   } else {
-          //     console.log ("Ack! I'm shrinking!?!?");
-          //   }
+          this.__setAttrHeight__ = function(value){
+            if (value > 0){
+              console.log("I'm grooooowiiiiiing!");
+            } else {
+              console.log ("Ack! I'm shrinking!?!?");
+            }
 
-          //   this.__setExposed__('height', value);
-          // }
+            this.__setExposed__('height', value);
+          }
 
-          // this.__setAttr__ = function(prop, value){
-          //   console.log('Setting "'+prop+'" (should never be "height") to value "'+value+'" ... Psych not doing anything!!!');
-          // }
+          this.__setAttr__ = function(prop, value){
+            console.log('Setting "'+prop+'" (should never be "height") to value "'+value+'" ... Psych not doing anything!!!');
+          }
 
-          // this.__getAttr__ = function(prop){
-          //   console.log('Getting "'+prop+'" - should be anything exposed!');
-          //   return 'unicorn!('+this.__getExposed__(prop)+')';
-          // }
+          this.__getAttr__ = function(prop){
+            console.log('Getting "'+prop+'" - should be anything exposed!');
+            return 'unicorn!('+this.__getExposed__(prop)+')';
+          }
         });
 
         var a = new Animal('Feline', 'kitty', 13);
@@ -109,10 +95,6 @@
 
 
         //10k objects
-        //no exposing: 1.67ms
-        //exposing just Person: 180ms
-        //exposing Person/Animal: 260ms
-        //exposing Peronn/Animal with __public__: ~8ms
 
         start = performance.now();
         for (var i=0; i<=10000; i++){
