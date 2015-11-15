@@ -436,8 +436,8 @@ sW.Module.define('sW.Class', function(){
             //now create the getters and setters for the public properties
             for (var i=0; i<definition.__public__.length; i++){
                 var prop = definition.__public__[i];
-                var getPropCustom = '__get'+sW.Utils.capitalize(prop)+'__';
-                var setPropCustom = '__set'+sW.Utils.capitalize(prop)+'__';
+                var getPropCustom = '__getAttr'+sW.Utils.capitalize(prop)+'__';
+                var setPropCustom = '__setAttr'+sW.Utils.capitalize(prop)+'__';
                 // THESE funcs aren't binding properly, they are binding all public vars
                 // to the last defined set/get funcs...
 
@@ -459,8 +459,22 @@ sW.Module.define('sW.Class', function(){
                 //     return this.__setAttr__ ? this.__setAttr__(prop, value) : this.__setExposed__(prop, value);
                 // }
 
-                eval.call(this,"var propGetter = function(){var getter = this."+getPropCustom+";if (getter){return getter.call(this);};return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
-                eval.call(this,"var propSetter = function(value){var setter = this."+setPropCustom+";if (setter){return setter.call(this, value);};return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
+
+                // THIS method works for keeping scope properly and everything works
+                // this is also nearly as fast as Classes without any exposing, and is on prototype
+                // If that is the case - do we need to clean the props to make sure they are safe?
+                // but then, how safe does it have to be?
+                // currently everything is looking up the prop via this[prop] - so it should be safe with any keys
+                // the only funky one is it is looking for this["__getAttrProp__"] - so weird characters would mean
+                // defining the variable as a string to make it work
+                eval.call(this,"var propGetter = function(){"+
+                               "var getter = this['"+getPropCustom+"'];"+
+                               "if (getter){return getter.call(this);};"+
+                               "return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
+                eval.call(this,"var propSetter = function(value){"+
+                               "var setter = this."+setPropCustom+";"+
+                               "if (setter){return setter.call(this, value);};"+
+                               "return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
                 definition.__defineGetter__(prop, propGetter);
                 definition.__defineSetter__(prop, propSetter);
             }
