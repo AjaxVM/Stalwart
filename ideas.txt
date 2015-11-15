@@ -8,3 +8,11 @@ It looks like if class require utils it can sometimes cause the same issues.
 Change how classes work to use prototyping under the hood
 Pass in an object with values/functions that are then assigned as prototypes.
 Anything you inherit will have wrapper functions created that apply that function (with arguments) - and you can overwrite and reference back with Parent.prototype.call(this, **args);
+
+
+What if we make Classes as lightweight as possible, and create a binding library specifically?
+Watching takes an object, variable and callback - and sets it up with getter/setter manually as needed.
+Binding sets one objects setter to be fired on another one being used, and vice versa (only on value change, to prevent recursion)
+
+Question: do we really want a function to be modifying the behaviour of an object instance ever?
+          How can we handle objects that already have getters and setters set?
