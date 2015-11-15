@@ -54,7 +54,7 @@ sW.Module.define('sW.Class', function(){
         var keys = Object.keys(newVars);
         for (var i=0; i<keys.length; i++){
             var key = keys[i];
-            if (typeof newVars[key] == 'function'){
+            if (typeof newVars[key] === 'function'){
                 if (newVars[key] != oldVars[key]){
                     newFuncs.push(key);
                 }
@@ -302,10 +302,10 @@ sW.Module.define('sW.Class', function(){
         var __definition = null;
         var __className = null;
         var __inherits = null;
-        if (arguments.length == 2){
+        if (arguments.length === 2){
             __className = arguments[0];
             __definition = arguments[1];
-        } else if (arguments.length == 3){
+        } else if (arguments.length === 3){
             __className = arguments[0];
             __inherits = arguments[1];
             __definition = arguments[2];
@@ -318,48 +318,91 @@ sW.Module.define('sW.Class', function(){
         definition.__className = __className;
 
         definition.__setExposed__ = function(prop, value){
+            //set ours first, but track old value, then call watchers
+            //this prevents recursion when binding
+            var oldValue = this.__exposed__[prop];
+            this.__exposed__[prop] = value;
             if (this.__watchers__ && this.__watchers__[prop]){
-                var oldValue = this.__exposed__[prop];
-                for (var i=0; i<this.__watchers__[prop]; i++){
+                for (var i=0; i<this.__watchers__[prop].length; i++){
                     this.__watchers__[prop][i](value, oldValue);
                 }
             }
-            this.__exposed__[prop] = value;
         }
         definition.__getExposed__ = function(prop){
             return this.__exposed__[prop];
         }
 
-        definition.watch = function(variable, callback){
+        var isExposed = function(cls, variable){
+            if (typeof cls.__exposed__ === 'undefined' || !cls.__exposed__.hasOwnProperty(variable)){
+                throw new AttributeError('Can only watch variables that are exposed, "'+variable+'" is not');
+            }
+            return true;
+        }
+
+        var checkWatchValues = function(cls, variable){
+            // TODO: create a teardown method that will remove all the listeners/bindings we have set
+            // track the remove methods and then go through and call all of them on teardown call
+
+            if (typeof cls.__watchers__ === 'undefined'){
+                cls.__watchers__ = {};
+            }
+
+            if (typeof cls.__watchers__[variable] === 'undefined'){
+                cls.__watchers__[variable] = [];
+            }
+        }
+
+        definition.listen = function(variable, callback){
             //attaches callback to fire whenever variable is updated
             //variable must be exposed before assigning watches
             //returns function that deregisters watch
             //callback should take args (newValue, oldValue)
 
-            if (!this.__exposed__.hasOwnProperty(variable)){
-                throw new AttributeError('Can only watch variables that are exposed');
-            }
-
-            if (typeof this.__watchers__ == 'undefined'){
-                this.__watchers__ = {};
-            }
-
-            if (typeof this.__watchers__[variable] == 'undefined'){
-                this.__watchers__[variable] = [];
+            checkWatchValues(this, variable);
+            if (!isExposed(this, variable)){
+                return;
             }
 
             this.__watchers__[variable].push(callback);
 
             //remove only first instance - in case things have attached multiple times for some reason
             var cls = this;
-            var removeWatcher = function(){
+            var removeListener = function(){
                 var index = cls.__watchers__[variable].indexOf(callback);
                 if (index > -1){
                     cls.__watchers__[variable].splice(index, 1);
                 }
             }
 
-            return removeWatcher;
+            return removeListener;
+        }
+
+        definition.watch = function(var1, obj2, var2){
+            //one-way binding of this.var1 to obj2.var2
+            //requires only that this exposes var1 and obj2 exposes var2
+            //returns function to call to unbind
+            var obj1 = this;
+
+            //create listenerFunc
+            var listenerFunc = function(value){
+                //we are only checking the raw value here, to make sure we don't get recursions
+                //this does rely on obj1.set var1 using __exposed__[var1]
+                if (value !== obj1.__exposed__[var1]){
+                    //we set using the setter though, so it will fire it's watchers and not break the chain
+                    obj1[var1] = value;
+                }
+            }
+
+            return obj2.listen(var2, listenerFunc);
+        }
+
+        definition.bind = function(var1, obj2, var2){
+            //two-way binding of this.var1 to obj2.var2
+            //bindings only fire if a value is changed to a non-equal value (prevents infinite loops)
+            var unbind1 = this.watch(var1, obj2, var2);
+            var unbind2 = obj2.watch(var2, this, var1);
+
+            return function(){unbind1();unbind2();};
         }
 
         //TODO is there a faster (or cleaner if not much slower) way to handle super than Parent.prototype.func.call(this, arg1, arg2...)?????
@@ -377,7 +420,7 @@ sW.Module.define('sW.Class', function(){
                     }
                     if (!definition.hasOwnProperty(k)){
                         definition[k] = inheritp[k];
-                    } else if (k == '__public__') {
+                    } else if (k === '__public__') {
                         //expand public values so this inherits properly
                         for (var j=0; j<inheritp[k].length; j++){
                             definition.__public__.push(inheritp[k][j]);
@@ -396,8 +439,6 @@ sW.Module.define('sW.Class', function(){
             //now create the getters and setters for the public properties
             for (var i=0; i<definition.__public__.length; i++){
                 var prop = definition.__public__[i];
-                var getPropCustom = '__getAttr'+sW.Utils.capitalize(prop)+'__';
-                var setPropCustom = '__setAttr'+sW.Utils.capitalize(prop)+'__';
                 // THIS method works for keeping scope properly and everything works
                 // this is also nearly as fast as Classes without any exposing, and is on prototype.
                 // The thing is, just defining functions with closures around prop is failing
@@ -406,16 +447,8 @@ sW.Module.define('sW.Class', function(){
                 // If that is the case - do we need to clean the props to make sure they are safe?
                 // But then, how safe does it have to be?
                 // Currently everything is looking up the prop via this[prop] - so it should be safe with any keys
-                // the only funky one is it is looking for this["__getAttrProp__"] - so weird characters would mean
-                // defining the variable as a string to make it work
-                eval.call(this,"var propGetter = function(){"+
-                               "var getter = this['"+getPropCustom+"'];"+
-                               "if (getter){return getter.call(this);};"+
-                               "return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
-                eval.call(this,"var propSetter = function(value){"+
-                               "var setter = this."+setPropCustom+";"+
-                               "if (setter){return setter.call(this, value);};"+
-                               "return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
+                eval.call(this,"var propGetter = function(){return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
+                eval.call(this,"var propSetter = function(value){return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
                 definition.__defineGetter__(prop, propGetter);
                 definition.__defineSetter__(prop, propSetter);
             }

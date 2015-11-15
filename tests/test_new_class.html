@@ -61,7 +61,7 @@
             this.intelligence = 5;
           }
 
-          this.__setAttrHeight__ = function(value){
+          this.setAttrHeight = function(value){
             if (value > 0){
               console.log("I'm grooooowiiiiiing!");
             } else {
@@ -72,7 +72,12 @@
           }
 
           this.__setAttr__ = function(prop, value){
-            console.log('Setting "'+prop+'" (should never be "height") to value "'+value+'" ... Psych not doing anything!!!');
+            if (prop === 'height'){
+              this.setAttrHeight(value);
+            } else {
+              console.log('Setting "'+prop+'" (should never be "height") to value "'+
+                          value+'" ... Psych not doing anything!!!');
+            }
           }
 
           this.__getAttr__ = function(prop){
@@ -88,6 +93,17 @@
         console.log(a);
         console.log(b);
         console.log(c);
+
+        console.log('testing binding');
+        b.bind('alive', c, 'alive');
+        //should be able to bind b.age to b.age and have it work (since value will never be different so not changes from binding)
+        b.bind('age', b, 'age');
+        b.age = 27;
+        c.alive = false;
+        console.log(b.alive, 'false');
+        b.alive = true;
+        console.log(c.alive, 'true');
+        console.log('done');
 
         var bobby = new Person('Bobby Bob');
         console.log(bobby);
