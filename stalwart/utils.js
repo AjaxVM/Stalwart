@@ -4,9 +4,9 @@
 
 'use strict';
 
-sW.Module.require('sW.Defaults');
+// sW.Module.require('sW.Defaults');
 
-sW.Module.define('sW.Utils', function(){
+sW.Module.define('sW.Utils', ['sW.Defaults'], function(){
 
     this.sleepFor = function( sleepDuration ){
         var now = new Date().getTime();

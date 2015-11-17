@@ -12,12 +12,19 @@ sW.init(function(){
     QUnit.test('Core Modules Loaded', function(){
         //init is firing callback so core modules must all be loaded
         //also, check that modulesLoaded works with singleton or array
-        QUnit.equal(sW.Module.modulesLoaded('sW.Debug'), true);
-        QUnit.equal(sW.Module.modulesLoaded(['sW.Trigger',
-                                       'sW.Module',
-                                       'sW.Defaults',
-                                       'sW.Utils',
-                                       'sW.Class']), true);
+        // QUnit.equal(sW.Module.modulesLoaded('sW.Debug'), true);
+        // QUnit.equal(sW.Module.modulesLoaded(['sW.Trigger',
+        //                                'sW.Module',
+        //                                'sW.Defaults',
+        //                                'sW.Utils',
+        //                                'sW.Class']), true);
+
+        QUnit.equal(sW.Module.modulesDefined('sW.Debug'), true);
+        QUnit.equal(sW.Module.modulesDefined(['sW.Trigger',
+                                              'sW.Module',
+                                              'sW.Defaults',
+                                              'sW.Utils',
+                                              'sW.Class']), true);
     });
 
     //this test won't work since the error is thrown outside of the function :/
@@ -29,16 +36,16 @@ sW.init(function(){
         QUnit.equal(sW.Module.get('sW.Class'), sW.Class);
     });
 
-    QUnit.test('Module.require works', function(){
-        try {
-            sW.Module.require('sW.Class');
-            QUnit.ok(true, 'passed');
-        } catch(e) {
-            QUnit.ok(false, 'An exception was thrown: '+e);
-        }
+    // QUnit.test('Module.require works', function(){
+    //     try {
+    //         sW.Module.require('sW.Class');
+    //         QUnit.ok(true, 'passed');
+    //     } catch(e) {
+    //         QUnit.ok(false, 'An exception was thrown: '+e);
+    //     }
 
-        QUnit.raises(function(){sW.Module.require('nonExistantModule')});
-    });
+    //     QUnit.raises(function(){sW.Module.require('nonExistantModule')});
+    // });
 
     QUnit.test('Trigger.once only fires once', function(){
         QUnit.expect(2);

@@ -165,163 +165,136 @@ sW.Module._loaded_modules = {}; //list of loaded module_name:module_namespace
 //define sW as a module of itself for reference
 //this also puts Trigger and Debug modules into the list
 sW.Module._loaded_modules['sW'] = sW;
-//throw in the Trigger and Debug modules since th
-sW.Module._loadingModule = null; //null or name of module being loaded presently
-sW.Module.__queuedModules = []; //list of [module_name, module_path] waiting to be loaded
-sW.Module.__callbacksWaitingForModules = []; //list of [[module_names], callback] waiting for all module_names to load before calling
-sW.Module.__afterLoadTrigger = 'sW.Module.moduleLoaded'; //name of the trigger to call after loading a module
-sW.Module.__afterAllLoadTrigger = 'sW.Module.allModulesLoaded'; //name of the trigger to call after current queue is emptied
 
-sW.Module.pathToModule = function(path){
+sW.Module.__callbacksWaitingForModules = []; //list of [[module_names], callback] waiting for all module_names to load before calling
+sW.Module.__afterDefinedTrigger = 'sW.Module.moduleDefined'; //name of the trigger to call after loading a module
+sW.Module.__afterAllDefinedTrigger = 'sW.Module.allModulesDefined'; //name of the trigger to call after current queue is emptied
+
+sW.Module.__waitingForDefinition = [];
+sW.Module.__includedScripts = [];
+
+sW.Module.get = function(path){
+    //takes a . separated path from root to object
+    //ie sW.Trigger gives Trigger Module
     var parts = path.split('.');
     var current = sW.Module._loaded_modules;
     $.each(parts, function(index, part){
+        current = current[part];
+        if (typeof current === 'undefined'){
+            return current;
+        }
+    });
+    return current;
+}
+
+sW.Module.declareNamespace = function(name){
+    var parts = name.split('.');
+    var current = sW.Module._loaded_modules;
+    $.each(parts, function(index, part){
+        if (typeof current[part] === 'undefined'){
+            current[part] = {};
+        }
         current = current[part];
     });
     return current;
 }
 
-sW.Module.loadingModule = function(name){
-    //If name is provided, return whether name is currently loading or waiting for load
-    //if not name, return if any modules are being loaded or queued for loading
-    if (name){
-        return sW.Module._loadingModule == name || sW.Module.__queuedModules.indexOf(name) > -1;
+sW.Module.isIncluded = function(name){
+    return sW.Module.__includedScripts.indexOf(name) > -1;
+}
+sW.Module.isDefined = function(name){
+    return typeof sW.Module.get(name) !== 'undefined';
+}
+
+sW.Module.include = function(script_path){
+    if (sW.Module.isIncluded(script_path)){
+        return false
     }
-    return sW.Module._loadingModule != null || sW.Module.__queuedModules.length > 0;
-}
+    sW.Module.__includedScripts.push(script_path);
 
-sW.Module.definedModule = function(name){
-    //returns whether module "name" is either loaded or being loaded
-    // return sW.Module._loaded_modules[name] != undefined || sW.Module.loadingModule(name);
-    return typeof sW.Module.pathToModule(name) != 'undefined' || sW.Module.loadingModule(name);
-}
-
-sW.Module.get = function(name){
-    //return namespace for module "name" or undefined if it is loaded
-    //first ensure this isn't loading, and thus partially _loaded_modules[name]
-    if (!sW.Module.loadingModule(name)){
-        // if (name.indexOf('sW.') == 0){
-        //     return sW[name.replace('sW.', '')];
-        // } else {
-        //     return sW.Module._loaded_modules[name];
-        // }
-        return sW.Module.pathToModule(name);
-    }
-}
-
-sW.Module.injectScript = function(script_path){
-    //sW._loadingModule = name;
     var js = document.createElement("script");
     js.type = 'text/javascript';
     js.src = script_path;
 
     document.head.appendChild(js);
+
+    return true;
 }
 
-sW.Module.include = function(script_path){
-    //load module "name" from src "script_path"
-    //if nothing else is loaded, this is loaded immediately
-    //otherwise it will be added to the end of the queue
+sW.Module.__callNextDefinition = function(){
+    //TODO: go through sW.Module.__waitingForDefiniton and check if necessities are met
 
-    if (sW.Module.definedModule(name)){
-        throw new ReferenceError('Module "'+name+'" already included');
-    }
+    var definitionsCalled = [];
 
-    if (!sW.Module.loadingModule()){
-        //nothing loading or queued, fire this off!
-        sW.Module.injectScript(script_path);
-    } else {
-        sW.Module.__queuedModules.push(script_path);
-    }
-}
+    sW.Module.__waitingForDefinition = $.grep(sW.Module.__waitingForDefinition, function(value){
+        var name = value[0];
+        var namespace = sW.Module.declareNamespace(name);
+        var requires = value[1];
+        var definition = value[2];
 
-sW.Module.includeNext = function(script_path){
-    //works the same as include, except pushes this scrip to the top fo the queue instead of the end
-    if (sW.Module.definedModule(name)){
-        throw new ReferenceError('Module "'+name+'" already included');
-    }
+        if (sW.Module.modulesDefined(requires)){
+            definition.call(namespace);
+            definitionsCalled.push(name);
+            return false;
+        }
+        return true;
+    });
 
-    if (!sW.Module.loadingModule()){
-        //nothing loading or queued, fire this off!
-        sW.Module.injectScript(script_path);
-    } else {
-        sW.Module.__queuedModules.unshift(script_path);
-    }
-}
+    $.each(definitionsCalled, function(i, value){
+        sW.Trigger.fire(sW.Module.__afterDefinedTrigger, value);
+    });
 
-sW.Module.injectNextModule = function(){
-    if (sW.Module.__queuedModules.length){
-        var cur = sW.Module.__queuedModules.shift();
-        sW.Module.injectScript(cur);
-    } else {
-        sW.Trigger.fire(sW.Module.__afterAllLoadTrigger);
+    if (sW.Module.__waitingForDefinition.length == 0){
+        sW.Trigger.fire(sW.Module.__afterAllDefinedTrigger);
     }
 }
 
 //bind a trigger on module load to load the next module if any
-sW.Trigger.on(sW.Module.__afterLoadTrigger, sW.Module.injectNextModule);
+sW.Trigger.on(sW.Module.__afterDefinedTrigger, sW.Module.__callNextDefinition);
 
-sW.Module.define = function(name, definition){
+sW.Module.exeuteDefinition = function(name, definition){
+    var namespace = sW.Module.declareNamespace(name);
+    definition.call(namespace);
+    sW.Trigger.fire(sW.Module.__afterDefinedTrigger, name);
+}
+
+sW.Module.define = function(){
     //use to begin defining a module
     //if module name begins with "sW." it will be added to sW namespace
     //Prevents redefinition of module
+    var name, requires=[], definition;
+
+    if (arguments.length == 2){
+        name = arguments[0];
+        definition = arguments[1];
+    } else {
+        name = arguments[0];
+        requires = arguments[1];
+        definition = arguments[2];
+    }
 
     //make sure this doesn't exist already
     if (sW.Module.get(name) != undefined){
         throw new Error('Module "'+name+'" declared or loaded already');
     }
 
-    var namespace = {};
-    //check if this is declaring itself a sW module
-    if (name.indexOf('sW.') == 0){
-        sW[name.replace('sW.', '')] = namespace;
+    if (sW.Module.modulesDefined(requires)){
+        sW.Module.exeuteDefinition(name, definition);
     } else {
-        sW.Module._loaded_modules[name] = namespace;
+        sW.Module.__waitingForDefinition.push([name, requires, definition]);
     }
 
-    sW.Module._loadingModule = name;
-
-    definition.call(namespace);
-
-    sW.Module.defined(name);
 }
 
-sW.Module.defined = function(name){
-    //declare that module is finished loading
-    //should run checks if another module is queued
-    //and should execute any callbacks waiting for loaded modules if all met
-
-    if (name != sW.Module._loadingModule){
-        throw new ReferenceError('Module "'+sW.module._loadingModule+'" was loading, but Module "'+name+'" is finishing!');
-    }
-
-    sW.Module._loadingModule = null;
-    sW.Trigger.fire(sW.Module.__afterLoadTrigger, name);
-}
-
-sW.Module.modulesLoaded = function(module_names){
-    if (typeof module_names == 'string'){
+sW.Module.modulesDefined = function(module_names){
+    if (typeof module_names === 'string'){
         module_names = [module_names];
     }
 
     var good = true;
     $.each(module_names, function(i, name){
-        // if (sW.Module._loaded_modules[name]
-        // if (!sW.Module.loadingModule(name)){
-        //     return sW.Module._loaded_modules[name]
-        // }
-        if (sW.Module.loadingModule(name)){
+        if (typeof sW.Module.get(name) === 'undefined'){
             good = false;
-        }
-
-        if (name.indexOf('sW.') > -1){
-            if (typeof sW[name.slice(3,name.length)] == 'undefined'){
-                good = false;
-            }
-        } else {
-            if (typeof sW.Module._loaded_modules[name] == 'undefined'){
-                good = false;
-            }
         }
     });
 
@@ -338,9 +311,10 @@ sW.Module.afterInclude = function(module_names, callback){
 }
 
 //setup trigger to call when modules are loaded to check if anything needs to be executed that was waiting on them
-sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
+// sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
+sW.Trigger.on(sW.Module.__afterDefinedTrigger, function(){
     sW.Module.__callbacksWaitingForModules = $.grep(
-        sW.Module.__callbacksWaitingForModules, function(callback, i){
+        sW.Module.__callbacksWaitingForModules, function(callback){
             if (sW.Module.modulesLoaded(callback[0])){
                 callback[1]();
                 return false;
@@ -350,12 +324,12 @@ sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
     );
 });
 
-sW.Module.require = function(module_names){
-    //throw error if not all module_names(string|Array[string]) are loaded
-    if (!sW.Module.modulesLoaded(module_names)){
-        throw new ReferenceError('Module requirements "'+module_names+'" not loaded!');
-    }
-}
+// sW.Module.require = function(module_names){
+//     //throw error if not all module_names(string|Array[string]) are loaded
+//     if (!sW.Module.modulesLoaded(module_names)){
+//         throw new ReferenceError('Module requirements "'+module_names+'" not loaded!');
+//     }
+// }
 
 //TODO: sW.Module.requireOrInclude - if not already included loads it - this requires us waiting for it to load which is wonky
 
@@ -380,7 +354,7 @@ sW.__afterInitTrigger = 'sW.initFinished';
 sW.finishedInit = false;
 
 //set up triggers to figure out when window loaded and all modules are loaded
-sW.Trigger.once(sW.Module.__afterAllLoadTrigger, function(){
+sW.Trigger.once(sW.Module.__afterAllDefinedTrigger, function(){
     //first check if window loaded already - if it is we know both finished
     if (sW._windowLoaded){
         sW.Trigger.fire(sW.__afterFullLoadTrigger);
@@ -413,9 +387,13 @@ sW.init = function(){
 
     var path = sW.rootPath();
 
-    if (!sW.Module.definedModule('sW.Defaults')) sW.Module.include(path+'defaults.js');
-    if (!sW.Module.definedModule('sW.Utils')) sW.Module.include(path+'utils.js');
-    if (!sW.Module.definedModule('sW.Class')) sW.Module.include(path+'class.js');
+    // if (!sW.Module.definedModule('sW.Defaults')) sW.Module.include(path+'defaults.js');
+    // if (!sW.Module.definedModule('sW.Utils')) sW.Module.include(path+'utils.js');
+    // if (!sW.Module.definedModule('sW.Class')) sW.Module.include(path+'class.js');
+
+    if (!sW.Module.get('sW.Defaults')) sW.Module.include(path+'defaults.js');
+    if (!sW.Module.get('sW.Utils')) sW.Module.include(path+'utils.js');
+    if (!sW.Module.get('sW.Class')) sW.Module.include(path+'class.js');
 
     $.each(userPrereqs, function(i, req){
         sW.Module.include(req);
