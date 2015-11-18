@@ -1,51 +1,18 @@
 'use strict';
 
-sW.init(function(){
+QUnit.module('Stalwart Core (Trigger, and Init) tests');
 
-    QUnit.module('Stalwart Core (Debug, Trigger, Module, and Init) tests');
-
-    QUnit.test('Window Loaded', function(){
-        //init is firing callback - so window must be loaded
-        QUnit.equal(sW._windowLoaded, true);
+sW.onInit(function(){
+    QUnit.test('Init callback called', function(){
+        QUnit.ok(true, 'Called');
     });
+});
 
-    QUnit.test('Core Modules Loaded', function(){
-        //init is firing callback so core modules must all be loaded
-        //also, check that modulesLoaded works with singleton or array
-        // QUnit.equal(sW.Module.modulesLoaded('sW.Debug'), true);
-        // QUnit.equal(sW.Module.modulesLoaded(['sW.Trigger',
-        //                                'sW.Module',
-        //                                'sW.Defaults',
-        //                                'sW.Utils',
-        //                                'sW.Class']), true);
+sW.afterInit(function(){
 
-        QUnit.equal(sW.Module.modulesDefined('sW', 'Debug'), true);
-        QUnit.equal(sW.Module.modulesDefined('sW', ['Trigger',
-                                                    'Module',
-                                                    'Defaults',
-                                                    'Utils',
-                                                    'Class']), true);
+    QUnit.test('afterInit called after init', function(){
+        QUnit.equal(sW.finishedInit, true);
     });
-
-    //this test won't work since the error is thrown outside of the function :/
-    // QUnit.test('Should not load non-existant module', function(){
-    //     QUnit.raises(function(){sW.Module.include('someBadModule.js')});
-    // });
-
-    QUnit.test('Ensure Module is accessible', function(){
-        QUnit.equal(sW.Module.get('sW.Class'), sW.Class);
-    });
-
-    // QUnit.test('Module.require works', function(){
-    //     try {
-    //         sW.Module.require('sW.Class');
-    //         QUnit.ok(true, 'passed');
-    //     } catch(e) {
-    //         QUnit.ok(false, 'An exception was thrown: '+e);
-    //     }
-
-    //     QUnit.raises(function(){sW.Module.require('nonExistantModule')});
-    // });
 
     QUnit.test('Trigger.once only fires once', function(){
         QUnit.expect(2);
@@ -96,16 +63,6 @@ sW.init(function(){
 
         sW.Trigger.off();
         QUnit.equal(sW.Trigger.watching().length, 0);
-    });
-
-    sW.Module.define('testModule', function(){
-        this.testVar = 45;
-    });
-
-    QUnit.test('Module Definition', function(){
-        QUnit.equal(sW.testModule, undefined);
-        var testModule = sW.Module.get('testModule');
-        QUnit.equal(testModule.testVar, 45);
     });
 
 });

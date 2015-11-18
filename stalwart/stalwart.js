@@ -3,25 +3,6 @@
 */
 
 
-/*
-  Root module for Project Stalwart
-  This file contians the basic top-level modules that should never be popped out to other files.
-  Top-level modules include:
-    Module (itself a module of sW - this contains the code necessary to include and define modules)
-    Debug (used for debug state and logging things)
-    Trigger (used to attach callbacks to trigger event (not element events))
-      //TODO: should Trigger also handle document events and throw them all together?
-  Top-level functions:
-    init (loads the whole shebang - requires jQuery and then loads all the other files)
-    onLoad (waits for window.onload to fire before calling callbacks);
-
-  Naming Conventions:
-    __var = private/internal variable which should not be exposed directly
-            no guarantee is ever made that this will remain consistent between versions
-    _var = semi-private variable - this should be safe to reference but shouldn't if avoidable
-    __var__ = private member of a Class - should only be used internally of that Class
-*/
-
 'use strict';
 
 //require jQuery at the top level
@@ -32,16 +13,29 @@ if (!window.jQuery){
 var sW = {};
 sW.version = '0.1';
 
-//handle top level window.onLoad non-sense
-sW._windowLoaded = false;
-sW.__windowLoadedTrigger = 'sW.windowLoaded';
-//triggers using this created after Trigger module below
+sW.__afterInitTrigger = 'sW.initFinished';
+sW.finishedInit = false;
 
-//TODO: Debug module
-sW.Debug = {}
+sW.onInit = function(userCallback){
+    if (userCallback){
+        $(document).ready(function(){
+            userCallback();
+            sW.Trigger.fire(sW.__afterInitTrigger);
+            sW.finishedInit = true;
+        });
+    }
+}
 
-//Create module "Trigger"
+sW.afterInit = function(callback){
+    if (sW.finishedInit){
+        callback();
+    } else {
+        sW.Trigger.once(sW.__afterInitTrigger, callback);
+    }
+}
 
+
+//Module "Trigger"
 sW.Trigger = {}; //namespace for Trigger module
 sW.Trigger.__callbacksToCallOnce = {}; //on trigger call and remove from list
 sW.Trigger.__callbacksToCallALot = {}; //on trigger call and leave on list
@@ -142,329 +136,274 @@ sW.Trigger.fire = function(trigger, value){
         });
     }
 }
+//End "Trigger"
 
-//trigger callback on window loaded
-window.onload = function(){
-    sW._windowLoaded = true;
-    sW.Trigger.fire(sW.__windowLoadedTrigger);
+
+//Module "Defaults"
+sW.Defaults = {};
+sW.Defaults.__defaults = {};
+
+sW.Defaults.setDefault = function(func, name, value){
+    if (!sW.Defaults.__defaults[func]){
+        sW.Defaults.__defaults[func] = {}
+    }
+    sW.Defaults.__defaults[func][name] = value;
 }
-//allow adding things to onLoad
-sW.onLoad = function(callback){
-    if (sW._windowLoaded){
-        callback();
-    } else {
-        sW.Trigger.once(sW.__windowLoadedTrigger, callback);
+
+sW.Defaults.getDefault = function(func, name){
+    return sW.Defaults.__defaults[func][name];
+}
+//End "Defaults"
+
+//Module "Utils"
+sW.Utils = {};
+sW.Utils.sleepFor = function( sleepDuration ){
+    var now = new Date().getTime();
+    while(new Date().getTime() < now + sleepDuration){ /* do nothing */ } 
+}
+
+sW.Utils.capitalize = function(value){
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+sW.Utils.removeFrom = function(arr, value){
+    var i = arr.indexOf(value);
+    if (i > -1){
+        arr.splice(i, 1);
     }
 }
 
-//End module "Trigger"
-
-//Create module "Module"
-sW.Module = {} //namespace for Module module
-sW.Module._loaded_modules = {}; //list of loaded module_name:module_namespace
-//define sW as a module of itself for reference
-//this also puts Trigger and Debug modules into the list
-sW.Module._loaded_modules['sW'] = sW;
-
-sW.Module.__callbacksWaitingForModules = []; //list of [[module_names], callback] waiting for all module_names to load before calling
-sW.Module.__afterDefinedTrigger = 'sW.Module.moduleDefined'; //name of the trigger to call after loading a module
-sW.Module.__afterAllDefinedTrigger = 'sW.Module.allModulesDefined'; //name of the trigger to call after current queue is emptied
-
-sW.Module.__waitingForDefinition = [];
-sW.Module.__includedScripts = [];
-sW.Module.__currentDeclarations = [];
-sW.Module.__pendingDefinitions = [];
-// sW.Module.__lastIncludedScript = null;
-
-sW.Module.getRelativePath = function(namespace, path){
-    //return a relative path from name to add path
-    console.log(namespace, path);
-}
-
-sW.Module.get = function(path){
-    //takes a . separated path from root to object
-    //ie sW.Trigger gives Trigger Module
-    var parts = path.split('.');
-    var current = sW.Module._loaded_modules;
-    $.each(parts, function(index, part){
-        if (typeof current === 'undefined'){
-            return current;
-        }
-        current = current[part];
-    });
-    return current;
-}
-
-sW.Module.declareNamespace = function(name){
-    var parts = name.split('.');
-    var current = sW.Module._loaded_modules;
-    $.each(parts, function(index, part){
-        if (typeof current[part] === 'undefined'){
-            current[part] = {};
-        }
-        current = current[part];
-    });
-    return current;
-}
-
-sW.Module.isIncluded = function(name){
-    return sW.Module.__includedScripts.indexOf(name) > -1;
-}
-sW.Module.isDefined = function(name){
-    return typeof sW.Module.get(name) !== 'undefined';
-}
-
-sW.Module.include = function(script_path, namespace){
-    if (sW.Module.isIncluded(script_path)){
-        return false
-    }
-    sW.Module.__includedScripts.push(script_path);
-
-    var js = document.createElement("script");
-    js.type = 'text/javascript';
-    js.src = script_path;
-
-    if (namespace){
-        js.setAttribute('namespace', namespace);
-    }
-    //get path
-    var path = script_path.substring(0,script_path.lastIndexOf('/')+1);
-    js.setAttribute('relative_path', path);
-
-    if (js.readyState){
-        js.onreadystatechange = function(){
-            js.onreadystatechange = null;
-
-            for (var i=0; i<sW.Module.__pendingDefinitions.length; i++){
-                var def = sW.Module.__pendingDefinitions[i];
-                sW.Module.defineCall(def, namespace, path);
-            }
-            sW.Module.__pendingDefinitions = [];
+sW.Utils.forEach = function(obj_or_arr, callback){
+    //If array will call callback with (element, index) as arguments
+    //If object will call callback with (element, key, index) as arguments
+    if ($.isArray(obj_or_arr)){
+        for (var i=0; i<obj_or_arr.length; i++){
+            callback(obj_or_arr[i], i);
         }
     } else {
-        js.onload = function(){
-
-            for (var i=0; i<sW.Module.__pendingDefinitions.length; i++){
-                var def = sW.Module.__pendingDefinitions[i];
-                sW.Module.defineCall(def, namespace, path);
-            }
-            sW.Module.__pendingDefinitions = [];
+        //assume an object
+        var keys = Object.keys(obj_or_arr);
+        for (var i=0; i<keys.length; i++){
+            callback(obj_or_arr[keys[i]], keys[i], i);
         }
     }
-
-    //sW.Module.__lastIncludedScript = js;
-
-    document.head.appendChild(js);
-
-    return true;
 }
 
-sW.Module.__callNextDefinition = function(){
-    var definitionsCalled = [];
 
-    sW.Module.__waitingForDefinition = $.grep(sW.Module.__waitingForDefinition, function(value){
-        var namespace = value[0];
-        //var namespace = sW.Module.declareNamespace(name);
-        var name = value[1];
-        var requires = value[2];
-        var definition = value[3];
+sW.Defaults.setDefault('formatString', 'array_separator', '%%');
+sW.Defaults.setDefault('formatString', 'key_separator', '{,}');
+sW.Utils.formatString = function(string, args, sep){
+    //formats a string with either array of values that replace sep (%% by default) characters
+    //or, takes an object of keys that match sep_start+key+sep_end (sep is split on comma and defaults to {,}) and replace with value
+    
+    if ($.isArray(args)){
+        var sep = sep || sW.Defaults.getDefault('formatString', 'array_separator');
+        var parts = string.split(sep);
+        var result = '';
+        
+        sW.forEach(parts, function(obj, i){
+            result = result + obj + args[i];
+        });
+        
+        return result;
+    } else {
+        //assume object
+        var sep = (sep || sW.Defaults.getDefault('formatString', 'key_separator'));
+        var seps = sep.split(',');
+        var sep_start = seps[0];
+        var sep_end = seps[1];
+        sW.forEach(args, function(obj, key, i){
+            string = string.replace(sep_start+key+sep_end, obj);
+        });
+    }
+    
+    return string;
+}
+//End "Utils"
 
-        var myNamespace = namespace ? namespace + '.' + name : name;
 
-        if (sW.Module.modulesDefined(namespace, requires)){
-            definition.call(myNamespace);
-            definitionsCalled.push(name);
-            return false;
+//Core function "Class"
+sW.Class = function(){
+    var __definition = null;
+    var __className = null;
+    var __inherits = null;
+    if (arguments.length === 2){
+        __className = arguments[0];
+        __definition = arguments[1];
+    } else if (arguments.length === 3){
+        __className = arguments[0];
+        __inherits = arguments[1];
+        __definition = arguments[2];
+    } else {
+        throw new TypeError('Wrong number of arguments!');
+    }
+
+    var definition = new __definition();
+    definition.__parents = [];
+    definition.__className = __className;
+
+    definition.__setExposed__ = function(prop, value){
+        //set ours first, but track old value, then call watchers
+        //this prevents recursion when binding
+        var oldValue = this.__exposed__[prop];
+        this.__exposed__[prop] = value;
+        if (this.__watchers__ && this.__watchers__[prop]){
+            for (var i=0; i<this.__watchers__[prop].length; i++){
+                this.__watchers__[prop][i](value, oldValue);
+            }
+        }
+    }
+    definition.__getExposed__ = function(prop){
+        return this.__exposed__[prop];
+    }
+
+    var isExposed = function(cls, variable){
+        if (typeof cls.__exposed__ === 'undefined' || !cls.__exposed__.hasOwnProperty(variable)){
+            throw new AttributeError('Can only watch variables that are exposed, "'+variable+'" is not');
         }
         return true;
-    });
-
-    $.each(definitionsCalled, function(i, value){
-        sW.Trigger.fire(sW.Module.__afterDefinedTrigger, value);
-    });
-
-    if (sW.Module.__waitingForDefinition.length == 0){
-        sW.Trigger.fire(sW.Module.__afterAllDefinedTrigger);
-    }
-}
-
-//bind a trigger on module load to load the next module if any
-sW.Trigger.on(sW.Module.__afterDefinedTrigger, sW.Module.__callNextDefinition);
-
-sW.Module.executeDefinition = function(namespace, name, definition){
-    var myNamespace = sW.Module.declareNamespace(namespace ? namespace + '.' + name : name);
-    definition.call(myNamespace);
-    sW.Trigger.fire(sW.Module.__afterDefinedTrigger, name);
-}
-
-sW.Module.declare = function(){
-    sW.Module.__currentDeclarations = [];
-    sW.Module.__pendingDefinitions = [];
-    for (var i=0; i<arguments.length; i++){
-        sW.Module.__currentDeclarations.push(arguments[i]);
-    }
-}
-
-sW.Module.define = function(){
-    var name, requires=[], definition;
-
-    if (arguments.length == 2){
-        name = arguments[0];
-        definition = arguments[1];
-    } else {
-        name = arguments[0];
-        requires = arguments[1];
-        definition = arguments[2];
-    }
-    sW.Module.__pendingDefinitions.push([name, requires, definition]);
-}
-
-sW.Module.defineCall = function(module_definition, namespace, relative_path){
-    //use to begin defining a module
-    //if module name begins with "sW." it will be added to sW namespace
-    //Prevents redefinition of module
-    var name, requires, definition;
-    name = module_definition[0];
-    requires = module_definition[1];
-    definition = module_definition[2];
-
-    //TODO check if we are loading the required scripts, if not grab them
-
-    if (sW.Module.modulesDefined(namespace, requires)){
-        sW.Module.executeDefinition(namespace, name, definition);
-    } else {
-        sW.Module.__waitingForDefinition.push([namespace, name, requires, definition]);
     }
 
-}
+    var checkWatchValues = function(cls, variable){
+        // TODO: create a teardown method that will remove all the listeners/bindings we have set
+        // track the remove methods and then go through and call all of them on teardown call
 
-sW.Module.modulesDefined = function(namespace, module_names){
-    if (typeof module_names === 'string'){
-        module_names = [module_names];
-    }
-
-    var good = true;
-    $.each(module_names, function(i, name){
-        if (typeof sW.Module.get(namespace ? namespace+'.'+name : name) === 'undefined'){
-            good = false;
+        if (typeof cls.__watchers__ === 'undefined'){
+            cls.__watchers__ = {};
         }
-    });
 
-    return good;
-}
-
-sW.Module.afterInclude = function(module_names, callback){
-    //fire callback if module_names already loaded, otherwise wait for them all
-    if (sW.Module.modulesLoaded(module_names)){
-        callback();
-    } else {
-        sW.Module.__callbacksWaitingForModules.push([module_names, callback]);
+        if (typeof cls.__watchers__[variable] === 'undefined'){
+            cls.__watchers__[variable] = [];
+        }
     }
-}
 
-//setup trigger to call when modules are loaded to check if anything needs to be executed that was waiting on them
-// sW.Trigger.on(sW.Module.__afterLoadTrigger, function(trigger, module_name){
-sW.Trigger.on(sW.Module.__afterDefinedTrigger, function(){
-    sW.Module.__callbacksWaitingForModules = $.grep(
-        sW.Module.__callbacksWaitingForModules, function(callback){
-            if (sW.Module.modulesLoaded(callback[0])){
-                callback[1]();
-                return false;
+    definition.listen = function(variable, callback){
+        //attaches callback to fire whenever variable is updated
+        //variable must be exposed before assigning watches
+        //returns function that deregisters watch
+        //callback should take args (newValue, oldValue)
+
+        checkWatchValues(this, variable);
+        if (!isExposed(this, variable)){
+            return;
+        }
+
+        this.__watchers__[variable].push(callback);
+
+        //remove only first instance - in case things have attached multiple times for some reason
+        var cls = this;
+        var removeListener = function(){
+            var index = cls.__watchers__[variable].indexOf(callback);
+            if (index > -1){
+                cls.__watchers__[variable].splice(index, 1);
             }
+        }
+
+        return removeListener;
+    }
+
+    definition.watch = function(var1, obj2, var2){
+        //one-way binding of this.var1 to obj2.var2
+        //requires only that this exposes var1 and obj2 exposes var2
+        //returns function to call to unbind
+        var obj1 = this;
+
+        obj1[var1] = obj2[var2];
+
+        //create listenerFunc
+        var listenerFunc = function(value){
+            //we are only checking the raw value here, to make sure we don't get recursions
+            //this does rely on obj1.set var1 using __exposed__[var1]
+            if (value !== obj1.__exposed__[var1]){
+                //we set using the setter though, so it will fire it's watchers and not break the chain
+                obj1[var1] = value;
+            }
+        }
+
+        return obj2.listen(var2, listenerFunc);
+    }
+
+    definition.bind = function(var1, obj2, var2){
+        //two-way binding of this.var1 to obj2.var2
+        //bindings only fire if a value is changed to a non-equal value (prevents infinite loops)
+        var unbind1 = this.watch(var1, obj2, var2);
+        var unbind2 = obj2.watch(var2, this, var1);
+
+        return function(){unbind1();unbind2();};
+    }
+
+    definition.instanceOf = function(other){
+        //returns true if this is an instance class other, or it inherits from class other
+        if (this.__className == other.__className){
             return true;
         }
-    );
-});
-
-// sW.Module.require = function(module_names){
-//     //throw error if not all module_names(string|Array[string]) are loaded
-//     if (!sW.Module.modulesLoaded(module_names)){
-//         throw new ReferenceError('Module requirements "'+module_names+'" not loaded!');
-//     }
-// }
-
-//TODO: sW.Module.requireOrInclude - if not already included loads it - this requires us waiting for it to load which is wonky
-
-//End module "Module"
-
-sW.rootPath = function(){
-    //Returns the path to the stalwart.js file from the script src attribute
-    //this will try to match to the stalwart.js name
-    //if the script is named something else, the stalwart attribute *must* be added - and cannot by used anywhere else
-    var path = $("script[src$='/stalwart.js'],script[src='stalwart.js'],script[stalwart]").first().attr('src');
-    if (!path){
-        throw new Error('Cannot find Stalwart script path!');
-    }
-    var pathparts = path.split('/');
-    pathparts.pop(); //remove last bit
-    path = pathparts.join('/');
-    return path ? path + '/' : '';
-}
-
-sW.__afterFullLoadTrigger = 'sW.loadedAndIncluded';
-sW.__afterInitTrigger = 'sW.initFinished';
-sW.finishedInit = false;
-
-//set up triggers to figure out when window loaded and all modules are loaded
-sW.Trigger.once(sW.Module.__afterAllDefinedTrigger, function(){
-    //first check if window loaded already - if it is we know both finished
-    if (sW._windowLoaded){
-        sW.Trigger.fire(sW.__afterFullLoadTrigger);
-    } else {
-        //window not loaded so let's assign a callback to that event since modules are done
-        sW.Trigger.once(sW.__windowLoadedTrigger, function(){
-            sW.Trigger.fire(sW.__afterFullLoadTrigger);
-        });
-    }
-});
-
-sW.init = function(){
-    //if we have two arguments, they are prereqs([[module_name,script_path]..]),callback
-    //if we have only one, figure out if string/array or assume callback
-
-    var userPrereqs = [];
-    var userCallback = [];
-
-    if (arguments.length == 1){
-        var arg = arguments[0];
-        if ($.isArray(arg)){
-            userPrereqs = arg;
-        } else {
-            userCallback = arg;
+        for (var i=0; i<this.__parents.length; i++){
+            if (this.__parents[i].instanceOf(other)){
+                return true;
+            }
         }
-    } else if (arguments.length == 2){
-        userPrereqs = arguments[0];
-        userCallback = arguments[1];
+        return false;
     }
 
-    var path = sW.rootPath();
+    //TODO is there a faster (or cleaner if not much slower) way to handle super than Parent.prototype.func.call(this, arg1, arg2...)?????
+    //unfortunately I think I am just trying to make something pretty that already is clear and very fast
+    //might be able to be a bit faster if we add a definition.$ = {__className: Class} and call: this.$.Class.func.call(self, arg1, arg2) - but we use more memory and aren't any clearer
 
-    // if (!sW.Module.definedModule('sW.Defaults')) sW.Module.include(path+'defaults.js');
-    // if (!sW.Module.definedModule('sW.Utils')) sW.Module.include(path+'utils.js');
-    // if (!sW.Module.definedModule('sW.Class')) sW.Module.include(path+'class.js');
+    var sWClassObject = Object.create(__definition);
+    if (__inherits){
+        for (var i=__inherits.length-1; i >= 0; i--){
+            var inheritp = __inherits[i].prototype;
+            definition.__parents.push(inheritp);
+            for (var k in inheritp){
+                if (inheritp.__public__ && inheritp.__public__.indexOf(k) > -1){
+                    continue;
+                }
+                if (!definition.hasOwnProperty(k)){
+                    definition[k] = inheritp[k];
+                } else if (k === '__public__') {
+                    //expand public values so this inherits properly
+                    for (var j=0; j<inheritp[k].length; j++){
+                        definition.__public__.push(inheritp[k][j]);
+                    }
+                }
+            }
+        }
+    }
 
-    if (!sW.Module.get('sW.Defaults')) sW.Module.include(path+'defaults.js', 'sW');
-    if (!sW.Module.get('sW.Utils')) sW.Module.include(path+'utils.js', 'sW');
-    if (!sW.Module.get('sW.Class')) sW.Module.include(path+'class.js', 'sW');
-    console.log(sW);
-
-    $.each(userPrereqs, function(i, req){
-        sW.Module.include(req);
-    });
-
-    if (userCallback){
-        sW.Trigger.once(sW.__afterFullLoadTrigger, function(){
-            userCallback();
-            sW.Trigger.fire(sW.__afterInitTrigger);
-            sW.finishedInit = true;
+    if (definition.__public__){
+        //ensure definition.__public__ has only unique values
+        definition.__public__ = definition.__public__.filter(function(value, index, cls){
+            return cls.indexOf(value) === index;
         });
-    }
-}
 
-sW.afterInit = function(callback){
-    if (sW.finishedInit){
-        callback();
-    } else {
-        sW.Trigger.once(sW.__afterInitTrigger, callback);
+        //now create the getters and setters for the public properties
+        for (var i=0; i<definition.__public__.length; i++){
+            var prop = definition.__public__[i];
+            // THIS method works for keeping scope properly and everything works
+            // this is also nearly as fast as Classes without any exposing, and is on prototype.
+            // The thing is, just defining functions with closures around prop is failing
+            // setting one of these props sets all somehow - hence the need to eval them :/
+
+            // If that is the case - do we need to clean the props to make sure they are safe?
+            // But then, how safe does it have to be?
+            // Currently everything is looking up the prop via this[prop] - so it should be safe with any keys
+            eval.call(this,"var propGetter = function(){return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
+            eval.call(this,"var propSetter = function(value){return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
+            definition.__defineGetter__(prop, propGetter);
+            definition.__defineSetter__(prop, propSetter);
+        }
     }
+
+    var sWClassObject = function(){
+        this.__exposed__ = {};
+        if (this.__init__){
+            this.__init__.apply(this, arguments);
+        }
+    }
+    sWClassObject.prototype = definition;
+    sWClassObject.prototype.constructor = sWClassObject;
+    sWClassObject.__className = __className;
+
+    return sWClassObject;
 }
+//End "Class"

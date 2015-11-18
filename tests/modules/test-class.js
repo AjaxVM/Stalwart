@@ -6,7 +6,7 @@ sW.afterInit(function(){
 
     QUnit.test('Class definition and instantation', function(){
         QUnit.expect(5);
-        var testClass = sW.Class.Class('testClass', function(){
+        var testClass = sW.Class('testClass', function(){
             this.__init__ = function(name, age){
                 this.something = 45;
                 this.name = name;
@@ -26,10 +26,10 @@ sW.afterInit(function(){
     QUnit.test('Class Diamond Inheritance', function(){
         QUnit.expect(4);
 
-        var Level1 = sW.Class.Class('Level1', function(){});
-        var Level2a = sW.Class.Class('Level2a', [Level1], function(){});
-        var Level2b = sW.Class.Class('Level2b', [Level1], function(){});
-        var Level3 = sW.Class.Class('Level3', [Level2a, Level2b], function(){});
+        var Level1 = sW.Class('Level1', function(){});
+        var Level2a = sW.Class('Level2a', [Level1], function(){});
+        var Level2b = sW.Class('Level2b', [Level1], function(){});
+        var Level3 = sW.Class('Level3', [Level2a, Level2b], function(){});
 
         var test = new Level3();
 
@@ -42,7 +42,7 @@ sW.afterInit(function(){
     QUnit.test('Class attribute exposing/setting', function(){
         QUnit.expect(3);
 
-        var testClass = sW.Class.Class('testClass', function(){
+        var testClass = sW.Class('testClass', function(){
             this.__public__ = ['age'];
 
             this.__setAttr__ = function(attr, value){
@@ -62,7 +62,7 @@ sW.afterInit(function(){
     });
 
     QUnit.test('Class Inheritance', function(){
-        var Animal = sW.Class.Class('Animal', function(){
+        var Animal = sW.Class('Animal', function(){
             this.__init__ = function(animalType, lifespan, sex){
                 this.animalType = animalType;
                 this.lifespan = lifespan;
@@ -110,7 +110,7 @@ sW.afterInit(function(){
             }
         });
 
-        var Dog = sW.Class.Class('Dog', [Animal], function(){
+        var Dog = sW.Class('Dog', [Animal], function(){
             this.__init__ = function(name, sex){
                 //this.__super('Animal.init', ['Canine', 15, sex]);
                 Animal.prototype.__init__.call(this, 'Canine', 15, sex);
@@ -131,7 +131,7 @@ sW.afterInit(function(){
             }
         });
 
-        var Cat = sW.Class.Class('Cat', [Animal], function(){
+        var Cat = sW.Class('Cat', [Animal], function(){
             this.__init__ = function(name, sex){
                 //this.__super('Animal.init', ['Feline', 20, sex]);
                 Animal.prototype.__init__.call(this, Feline, 20, sex);
@@ -157,7 +157,7 @@ sW.afterInit(function(){
             }
         });
 
-        var CatDog = sW.Class.Class('CatDog', [Cat, Dog], function(){
+        var CatDog = sW.Class('CatDog', [Cat, Dog], function(){
             this.__init__ = function(name, sex){
                 //only calling super on Animal to test it, and so we don't call it 3 times (if we super all inits)
                 //this.__super('Animal.init', ['CatDog', 15, sex]);
@@ -210,7 +210,7 @@ sW.afterInit(function(){
     });
 
     QUnit.test('Class instantation time compare', function(){
-        var Dog = sW.Class.Class('Dog', function(){
+        var Dog = sW.Class('Dog', function(){
             this.init = function(age){
                 this.age = age;
                 this.name = 'Jake';
