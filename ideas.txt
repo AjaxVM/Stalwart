@@ -16,3 +16,19 @@ Binding sets one objects setter to be fired on another one being used, and vice 
 
 Question: do we really want a function to be modifying the behaviour of an object instance ever?
           How can we handle objects that already have getters and setters set?
+
+When including a module, take an extra param (namespace) which stores the definitions from a script inside that namespace in _loaded_modules, instead of directly in _loaded_modules
+
+I am trying to get the modules to be more robust about requiring.
+I am thinking a require method, that is basically include but checks if it is there and fails silently if it is.
+Require takes the filename of the file (like include), and the requirements for the declare are names still.
+Need to be able to use relative paths. Can we store the namespace and the path in the attributes for a script, then do a call like:
+    sW.Module.require(sW.Module.relativePath('sW.Utils', 'defaults.js'));
+    //which resolves to the path for defaults.js script
+
+Or we just make the required part of declare take scripts instead of names (can't do that since scripts have no clue about their contents or what order they need to load).
+Scripts will be loaded async so need to know what modules they declare and wait for those.
+
+Using require(script) and declare(...[module, names], ...) allows us to declare needed scripts to fulfil the requirements for the declaration.
+We could do declare(..., {module_name: script_path...}, ...) which might be better - this also allows us to piggy back these onto the declared namespaces instead of the default one
+So when you include a module have a namespace with it that goes in and trickles down if you will

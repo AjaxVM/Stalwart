@@ -23,7 +23,7 @@ sW.afterInit(function(){
         QUnit.ok(a.instanceOf(testClass), 'This is an instanceOf testClass');
     });
 
-    QUnit.test('Diamond Inheritance', function(){
+    QUnit.test('Class Diamond Inheritance', function(){
         QUnit.expect(4);
 
         var Level1 = sW.Class.Class('Level1', function(){});

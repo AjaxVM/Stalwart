@@ -34,7 +34,9 @@
 
 'use strict';
 
-sW.Module.define('sW.Class', function(){
+sW.Module.declare('Class');
+
+sW.Module.define('Class', function(){
     var nS = this; //reference nameSpace for the sub functions
 
     nS.Class = function(){

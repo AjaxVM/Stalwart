@@ -4,7 +4,9 @@
 
 'use strict';
 
-sW.Module.define('sW.Defaults', function(){
+sW.Module.declare('Defaults');
+
+sW.Module.define('Defaults', function(){
     var __defaults = {};
 
 

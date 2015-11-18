@@ -6,7 +6,9 @@
 
 // sW.Module.require('sW.Defaults');
 
-sW.Module.define('sW.Utils', ['sW.Defaults'], function(){
+sW.Module.declare('Utils');
+
+sW.Module.define('Utils', ['Defaults'], function(){
 
     this.sleepFor = function( sleepDuration ){
         var now = new Date().getTime();

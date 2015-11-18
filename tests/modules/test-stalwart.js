@@ -19,12 +19,12 @@ sW.init(function(){
         //                                'sW.Utils',
         //                                'sW.Class']), true);
 
-        QUnit.equal(sW.Module.modulesDefined('sW.Debug'), true);
-        QUnit.equal(sW.Module.modulesDefined(['sW.Trigger',
-                                              'sW.Module',
-                                              'sW.Defaults',
-                                              'sW.Utils',
-                                              'sW.Class']), true);
+        QUnit.equal(sW.Module.modulesDefined('sW', 'Debug'), true);
+        QUnit.equal(sW.Module.modulesDefined('sW', ['Trigger',
+                                                    'Module',
+                                                    'Defaults',
+                                                    'Utils',
+                                                    'Class']), true);
     });
 
     //this test won't work since the error is thrown outside of the function :/

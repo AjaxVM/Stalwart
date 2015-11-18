@@ -172,6 +172,14 @@ sW.Module.__afterAllDefinedTrigger = 'sW.Module.allModulesDefined'; //name of th
 
 sW.Module.__waitingForDefinition = [];
 sW.Module.__includedScripts = [];
+sW.Module.__currentDeclarations = [];
+sW.Module.__pendingDefinitions = [];
+// sW.Module.__lastIncludedScript = null;
+
+sW.Module.getRelativePath = function(namespace, path){
+    //return a relative path from name to add path
+    console.log(namespace, path);
+}
 
 sW.Module.get = function(path){
     //takes a . separated path from root to object
@@ -179,10 +187,10 @@ sW.Module.get = function(path){
     var parts = path.split('.');
     var current = sW.Module._loaded_modules;
     $.each(parts, function(index, part){
-        current = current[part];
         if (typeof current === 'undefined'){
             return current;
         }
+        current = current[part];
     });
     return current;
 }
@@ -206,7 +214,7 @@ sW.Module.isDefined = function(name){
     return typeof sW.Module.get(name) !== 'undefined';
 }
 
-sW.Module.include = function(script_path){
+sW.Module.include = function(script_path, namespace){
     if (sW.Module.isIncluded(script_path)){
         return false
     }
@@ -216,24 +224,55 @@ sW.Module.include = function(script_path){
     js.type = 'text/javascript';
     js.src = script_path;
 
+    if (namespace){
+        js.setAttribute('namespace', namespace);
+    }
+    //get path
+    var path = script_path.substring(0,script_path.lastIndexOf('/')+1);
+    js.setAttribute('relative_path', path);
+
+    if (js.readyState){
+        js.onreadystatechange = function(){
+            js.onreadystatechange = null;
+
+            for (var i=0; i<sW.Module.__pendingDefinitions.length; i++){
+                var def = sW.Module.__pendingDefinitions[i];
+                sW.Module.defineCall(def, namespace, path);
+            }
+            sW.Module.__pendingDefinitions = [];
+        }
+    } else {
+        js.onload = function(){
+
+            for (var i=0; i<sW.Module.__pendingDefinitions.length; i++){
+                var def = sW.Module.__pendingDefinitions[i];
+                sW.Module.defineCall(def, namespace, path);
+            }
+            sW.Module.__pendingDefinitions = [];
+        }
+    }
+
+    //sW.Module.__lastIncludedScript = js;
+
     document.head.appendChild(js);
 
     return true;
 }
 
 sW.Module.__callNextDefinition = function(){
-    //TODO: go through sW.Module.__waitingForDefiniton and check if necessities are met
-
     var definitionsCalled = [];
 
     sW.Module.__waitingForDefinition = $.grep(sW.Module.__waitingForDefinition, function(value){
-        var name = value[0];
-        var namespace = sW.Module.declareNamespace(name);
-        var requires = value[1];
-        var definition = value[2];
+        var namespace = value[0];
+        //var namespace = sW.Module.declareNamespace(name);
+        var name = value[1];
+        var requires = value[2];
+        var definition = value[3];
 
-        if (sW.Module.modulesDefined(requires)){
-            definition.call(namespace);
+        var myNamespace = namespace ? namespace + '.' + name : name;
+
+        if (sW.Module.modulesDefined(namespace, requires)){
+            definition.call(myNamespace);
             definitionsCalled.push(name);
             return false;
         }
@@ -252,16 +291,21 @@ sW.Module.__callNextDefinition = function(){
 //bind a trigger on module load to load the next module if any
 sW.Trigger.on(sW.Module.__afterDefinedTrigger, sW.Module.__callNextDefinition);
 
-sW.Module.exeuteDefinition = function(name, definition){
-    var namespace = sW.Module.declareNamespace(name);
-    definition.call(namespace);
+sW.Module.executeDefinition = function(namespace, name, definition){
+    var myNamespace = sW.Module.declareNamespace(namespace ? namespace + '.' + name : name);
+    definition.call(myNamespace);
     sW.Trigger.fire(sW.Module.__afterDefinedTrigger, name);
 }
 
+sW.Module.declare = function(){
+    sW.Module.__currentDeclarations = [];
+    sW.Module.__pendingDefinitions = [];
+    for (var i=0; i<arguments.length; i++){
+        sW.Module.__currentDeclarations.push(arguments[i]);
+    }
+}
+
 sW.Module.define = function(){
-    //use to begin defining a module
-    //if module name begins with "sW." it will be added to sW namespace
-    //Prevents redefinition of module
     var name, requires=[], definition;
 
     if (arguments.length == 2){
@@ -272,28 +316,36 @@ sW.Module.define = function(){
         requires = arguments[1];
         definition = arguments[2];
     }
+    sW.Module.__pendingDefinitions.push([name, requires, definition]);
+}
 
-    //make sure this doesn't exist already
-    if (sW.Module.get(name) != undefined){
-        throw new Error('Module "'+name+'" declared or loaded already');
-    }
+sW.Module.defineCall = function(module_definition, namespace, relative_path){
+    //use to begin defining a module
+    //if module name begins with "sW." it will be added to sW namespace
+    //Prevents redefinition of module
+    var name, requires, definition;
+    name = module_definition[0];
+    requires = module_definition[1];
+    definition = module_definition[2];
 
-    if (sW.Module.modulesDefined(requires)){
-        sW.Module.exeuteDefinition(name, definition);
+    //TODO check if we are loading the required scripts, if not grab them
+
+    if (sW.Module.modulesDefined(namespace, requires)){
+        sW.Module.executeDefinition(namespace, name, definition);
     } else {
-        sW.Module.__waitingForDefinition.push([name, requires, definition]);
+        sW.Module.__waitingForDefinition.push([namespace, name, requires, definition]);
     }
 
 }
 
-sW.Module.modulesDefined = function(module_names){
+sW.Module.modulesDefined = function(namespace, module_names){
     if (typeof module_names === 'string'){
         module_names = [module_names];
     }
 
     var good = true;
     $.each(module_names, function(i, name){
-        if (typeof sW.Module.get(name) === 'undefined'){
+        if (typeof sW.Module.get(namespace ? namespace+'.'+name : name) === 'undefined'){
             good = false;
         }
     });
@@ -391,9 +443,10 @@ sW.init = function(){
     // if (!sW.Module.definedModule('sW.Utils')) sW.Module.include(path+'utils.js');
     // if (!sW.Module.definedModule('sW.Class')) sW.Module.include(path+'class.js');
 
-    if (!sW.Module.get('sW.Defaults')) sW.Module.include(path+'defaults.js');
-    if (!sW.Module.get('sW.Utils')) sW.Module.include(path+'utils.js');
-    if (!sW.Module.get('sW.Class')) sW.Module.include(path+'class.js');
+    if (!sW.Module.get('sW.Defaults')) sW.Module.include(path+'defaults.js', 'sW');
+    if (!sW.Module.get('sW.Utils')) sW.Module.include(path+'utils.js', 'sW');
+    if (!sW.Module.get('sW.Class')) sW.Module.include(path+'class.js', 'sW');
+    console.log(sW);
 
     $.each(userPrereqs, function(i, req){
         sW.Module.include(req);
