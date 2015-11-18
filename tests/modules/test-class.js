@@ -2,7 +2,7 @@
 
 sW.afterInit(function(){
 
-    QUnit.module('Stalwart.Class tests');
+    QUnit.module('Stalwart Class tests');
 
     QUnit.test('Class definition and instantation', function(){
         QUnit.expect(5);

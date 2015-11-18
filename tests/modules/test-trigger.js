@@ -1,18 +1,8 @@
 'use strict';
 
-QUnit.module('Stalwart Core (Trigger, and Init) tests');
-
-sW.onInit(function(){
-    QUnit.test('Init callback called', function(){
-        QUnit.ok(true, 'Called');
-    });
-});
-
 sW.afterInit(function(){
 
-    QUnit.test('afterInit called after init', function(){
-        QUnit.equal(sW.finishedInit, true);
-    });
+    QUnit.module('Stalwart Trigger tests');
 
     QUnit.test('Trigger.once only fires once', function(){
         QUnit.expect(2);
@@ -64,5 +54,4 @@ sW.afterInit(function(){
         sW.Trigger.off();
         QUnit.equal(sW.Trigger.watching().length, 0);
     });
-
 });
