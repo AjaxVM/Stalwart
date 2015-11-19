@@ -9,7 +9,7 @@
 //Module "Trigger"
 sW.Trigger = {}; //namespace for Trigger module
 
-(function(){
+sW.Module(sW.Trigger, function(){
     var __callbacksToCallOnce = {}; //on trigger call and remove from list
     var __callbacksToCallALot = {}; //on trigger call and leave on list
 
@@ -109,5 +109,5 @@ sW.Trigger = {}; //namespace for Trigger module
             });
         }
     }
-}).call(sW.Trigger);
+});
 //End "Trigger"

@@ -11,25 +11,37 @@ if (!window.jQuery){
 }
 
 var sW = {};
-sW.version = '0.1';
 
-sW.__afterInitTrigger = 'sW.initFinished';
-sW.finishedInit = false;
-
-sW.onInit = function(userCallback){
-    if (userCallback){
-        $(document).ready(function(){
-            userCallback();
-            sW.Trigger.fire(sW.__afterInitTrigger);
-            sW.finishedInit = true;
-        });
-    }
+//declare basic module structure at top level
+//this also creates the "Module" module (of sorts)
+//Modules are applied onto whichever object is given to them
+//in this case, directly onto sW for single values, or onto an inner-object for true modules
+sW.Module = function(namespace, definition){
+    //this==namespace, just a convenience
+    definition.call(namespace, namespace);
 }
 
-sW.afterInit = function(callback){
-    if (sW.finishedInit){
-        callback();
-    } else {
-        sW.Trigger.once(sW.__afterInitTrigger, callback);
+sW.Module(sW, function(namespace){
+    this.version = '0.1';
+
+    var __afterInitTrigger = 'sW.initFinished';
+    this.finishedInit = false;
+
+    this.onInit = function(userCallback){
+        if (userCallback){
+            $(document).ready(function(){
+                userCallback();
+                namespace.Trigger.fire(__afterInitTrigger);
+                namespace.finishedInit = true;
+            });
+        }
     }
-}
+
+    this.afterInit = function(callback){
+        if (namespace.finishedInit){
+            callback();
+        } else {
+            namespace.Trigger.once(__afterInitTrigger, callback);
+        }
+    }
+});

@@ -41,8 +41,6 @@ sW.afterInit(function(){
         sW.Trigger.once('testTrigger2', testFunc);
         sW.Trigger.on('testTrigger3', function(){});
 
-        //shoud be 3 - one from last test and two from this
-
         QUnit.equal(sW.Trigger.watching().length, 3);
 
         sW.Trigger.off('testTrigger');

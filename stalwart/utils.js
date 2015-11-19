@@ -9,7 +9,7 @@
 //Module "Utils"
 
 sW.Utils = {};
-(function(){
+sW.Module(sW.Utils, function(){
     this.sleepFor = function( sleepDuration ){
         //blocks everything for sleepDuration (ms)
         var now = new Date().getTime();
@@ -96,5 +96,5 @@ sW.Utils = {};
         return string;
     }
     this.formatString.default_separator = '{,}';
-}).call(sW.Utils);
+});
 //End "Utils"
