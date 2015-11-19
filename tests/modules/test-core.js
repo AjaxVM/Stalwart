@@ -1,10 +1,16 @@
 'use strict';
 
-QUnit.module('Stalwart Init tests');
+QUnit.module('Stalwart Core');
+
+QUnit.test('Version is correct', function(){
+    QUnit.equal(sW.version, '0.1');
+    tested('sW.version');
+});
 
 sW.onInit(function(){
     QUnit.test('onInit callback called', function(){
         QUnit.ok(true, 'Called');
+        tested('sW.onInit');
     });
 });
 
@@ -12,6 +18,7 @@ sW.afterInit(function(){
 
     QUnit.test('afterInit called after init', function(){
         QUnit.equal(sW.finishedInit, true);
+        tested('sW.afterInit', 'sW.finishedInit');
     });
 
     QUnit.test('Module definition works', function(){
@@ -30,6 +37,7 @@ sW.afterInit(function(){
         QUnit.equal(myModule.public_var, 5678);
         QUnit.equal(myModule.something, 'abcd');
         QUnit.equal(Object.keys(myModule).length, 2);
+        tested('sW.Module');
     });
 
 });

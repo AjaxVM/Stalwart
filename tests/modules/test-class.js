@@ -2,7 +2,7 @@
 
 sW.afterInit(function(){
 
-    QUnit.module('Stalwart Class tests');
+    QUnit.module('Stalwart Class');
 
     QUnit.test('Class definition and instantation', function(){
         QUnit.expect(5);
@@ -21,6 +21,8 @@ sW.afterInit(function(){
         QUnit.equal(a.age, 23);
         QUnit.equal(a.something, 45);
         QUnit.ok(a.instanceOf(testClass), 'This is an instanceOf testClass');
+
+        tested('sW.Class');
     });
 
     QUnit.test('Class Diamond Inheritance', function(){

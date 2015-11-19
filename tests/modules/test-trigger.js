@@ -2,7 +2,7 @@
 
 sW.afterInit(function(){
 
-    QUnit.module('Stalwart Trigger tests');
+    QUnit.module('Stalwart Trigger');
 
     QUnit.test('Trigger.once only fires once', function(){
         QUnit.expect(2);
@@ -14,6 +14,8 @@ sW.afterInit(function(){
 
         sW.Trigger.fire('testTrigger', 'testValue');
         sW.Trigger.fire('testTrigger', 'anotherTestValue');
+
+        tested('sW.Trigger.once', 'sW.Trigger.fire');
     });
 
     QUnit.test('Trigger.on fires twice', function(){
@@ -26,6 +28,8 @@ sW.afterInit(function(){
 
         sW.Trigger.fire('testTrigger', 'testValue');
         sW.Trigger.fire('testTrigger', 'anotherTestValue');
+
+        tested('sW.Trigger.on');
     });
 
     QUnit.test('Trigger.off cleanup', function(){
@@ -51,5 +55,7 @@ sW.afterInit(function(){
 
         sW.Trigger.off();
         QUnit.equal(sW.Trigger.watching().length, 0);
+
+        tested('sW.Trigger.off', 'sW.Trigger.watching');
     });
 });

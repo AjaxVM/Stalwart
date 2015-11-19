@@ -25,8 +25,21 @@
   <script src='../stalwart/utils.js' type='text/javascript'></script>
   <script src='../stalwart/class.js' type='text/javascript'></script>
 
-  <script src='modules/test-init.js' type='text/javascript'></script>
+  <!-- script to set up tracking of the test coverage! -->
+  <script type='text/javascript'>
+    // Track all of the QUnit.modules that cover above members
+    // Used to properly calculate test coverage
+    var sWAllModules = [
+      'Stalwart Class',
+      'Stalwart Core',
+      'Stalwart Trigger',
+      'Stalwart Utils'
+      ]
+  </script>
+
+  <script src='modules/test-coverage.js' type="text/javascript"></script>
+
+  <script src='modules/test-core.js' type='text/javascript'></script>
   <script src='modules/test-utils.js' type='text/javascript'></script>
   <script src='modules/test-trigger.js' type='text/javascript'></script>
-  <script src='modules/test-class.js' type='text/javascript'></script>
-</html>
+  <script src='modules/test-class.js' type='text/javascript'></script></html>

@@ -2,7 +2,7 @@
 
 sW.afterInit(function(){
 
-    QUnit.module('Stalwart Utils tests');
+    QUnit.module('Stalwart Utils');
 
     QUnit.test('Utils.sleepFor blocks', function(){
         var now = new Date().getTime();
@@ -10,12 +10,16 @@ sW.afterInit(function(){
         sW.Utils.sleepFor(100);
 
         QUnit.ok(new Date().getTime()-now >= 100);
+
+        tested('sW.Utils.sleepFor');
     });
 
     QUnit.test('Utils.capitalize', function(){
         QUnit.equal(sW.Utils.capitalize('a jolly man'), 'A jolly man'); 
         QUnit.equal(sW.Utils.capitalize('DOG'), 'DOG');
         QUnit.equal(sW.Utils.capitalize('cAT'), 'CAT');
+
+        tested('sW.Utils.capitalize');
     });
 
     QUnit.test('Utils.removeFrom', function(){
@@ -28,6 +32,8 @@ sW.afterInit(function(){
 
         sW.Utils.removeFrom(test, 7);
         QUnit.equal(test.length, 8);
+
+        tested('sW.Utils.removeFrom');
     });
 
     QUnit.test('Utils.forEach', function(){
@@ -58,6 +64,8 @@ sW.afterInit(function(){
             delete person[key];
         });
         QUnit.equal(Object.keys(person).length, 0);
+
+        tested('sW.Utils.forEach');
     });
 
     QUnit.test('Utils.replaceAll', function(){
@@ -70,6 +78,8 @@ sW.afterInit(function(){
         //make sure all instances are replaced
         QUnit.equal(sW.Utils.replaceAll(string, 'red', 'purple'),
                     'Roses are purple, Violets are blue, I like purple, but not blue');
+
+        tested('sW.Utils.replaceAll');
     });
 
     QUnit.test('Utils.formatString', function(){
@@ -113,6 +123,8 @@ sW.afterInit(function(){
                 ),
             'My name is Johhny, I live at 1234 Made-up Lane. "Johhny" is the best name'
         );
+
+        tested('sW.Utils.formatString');
     });
 
 });
