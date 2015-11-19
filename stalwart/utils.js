@@ -3,13 +3,10 @@
 */
 
 
-"use strict";
-
-
-//Module "Utils"
-
 sW.Utils = {};
 sW.Module(sW.Utils, function(){
+    "use strict";
+    
     this.sleepFor = function( sleepDuration ){
         //blocks everything for sleepDuration (ms)
         var now = new Date().getTime();

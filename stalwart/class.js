@@ -3,14 +3,11 @@
 */
 
 
-"use strict";
-
-
 //Todo: do we want Class to be a full module with multiple members, or just assign a singleton?
 
-//Core function "Class"
-
 sW.Module(sW, function(){
+    "use strict";
+    
     this.Class = function(){
         //__definition is a passed-in constructor, don't care about naming convention in jshint
         var __definition = null;

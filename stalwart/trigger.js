@@ -3,13 +3,10 @@
 */
 
 
-"use strict";
-
-
-//Module "Trigger"
 sW.Trigger = {}; //namespace for Trigger module
-
 sW.Module(sW.Trigger, function(){
+    "use strict";
+    
     var __callbacksToCallOnce = {}; //on trigger call and remove from list
     var __callbacksToCallALot = {}; //on trigger call and leave on list
 
