@@ -3,6 +3,9 @@
         "sW",
         "QUnit"
     ],
+    "--prereq": [
+        "stalwart/stalwart.js"
+    ],
 
     "camelcase": true,
     "curly": true,
