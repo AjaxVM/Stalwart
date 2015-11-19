@@ -15,7 +15,9 @@ var sW = {};
 //declare basic module structure at top level
 //this also creates the "Module" module (of sorts)
 //Modules are applied onto whichever object is given to them
-//in this case, directly onto sW for single values, or onto an inner-object for true modules
+//in this case, they are sharing the core sW namespace, because they are adding values to it directly
+//in the case of a more advanced module (like Trigger), which defines multiple functions/constants/etc.
+//you should create a named object inside sW (or wherever) to represent the namespace for the module
 sW.Module = function(namespace, definition){
     //this==namespace, just a convenience
     definition.call(namespace, namespace);
