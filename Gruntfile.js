@@ -1,16 +1,21 @@
 /*global module:false*/
 
 module.exports = function(grunt) {
+    // Load plugin
+    grunt.loadNpmTasks('grunt-contrib-jshint');
+    grunt.loadNpmTasks('grunt-contrib-qunit');
+
     // Project configuration.
     grunt.initConfig({
+        jshint: {
+            all: ['*.js', 'stalwart/*.js', 'test/*.js']
+        },
         qunit: {
-            'stalwart': ['test/test-stalwart.html']
+            all: ['test/test-stalwart.html']
         }
     });
 
-    // Load plugin
-    grunt.loadNpmTasks('grunt-contrib-qunit');
-
     // Task to run tests
-    grunt.registerTask('travis', 'qunit:stalwart');
+    grunt.registerTask('test', ['jshint', 'qunit']);
+    grunt.registerTask('default', ['test']);
 };
