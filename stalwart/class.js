@@ -175,8 +175,9 @@ sW.Module(sW, function(namespace){
                 // If that is the case - do we need to clean the props to make sure they are safe?
                 // But then, how safe does it have to be?
                 // Currently everything is looking up the prop via this[prop] - so it should be safe with any keys
-                eval.call(this,"var propGetter = function(){return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
-                eval.call(this,"var propSetter = function(value){return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
+                var propGetter, propSetter;
+                eval("propGetter = function(){return this.__getAttr__ ? this.__getAttr__('"+prop+"') : this.__getExposed__('"+prop+"');}");
+                eval("propSetter = function(value){return this.__setAttr__ ? this.__setAttr__('"+prop+"', value) : this.__setExposed__('"+prop+"', value);}");
                 definition.__defineGetter__(prop, propGetter);
                 definition.__defineSetter__(prop, propSetter);
             }
