@@ -6,6 +6,8 @@
 'use strict';
 
 
+//Todo: do we want a Class module, or just the object/function suffices?
+
 //Core function "Class"
 sW.Class = function(){
     var __definition = null;
