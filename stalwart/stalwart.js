@@ -3,7 +3,7 @@
 */
 
 
-'use strict';
+"use strict";
 
 //require jQuery at the top level
 if (!window.jQuery){
@@ -21,12 +21,12 @@ var sW = {};
 sW.Module = function(namespace, definition){
     //this==namespace, just a convenience
     definition.call(namespace, namespace);
-}
+};
 
 sW.Module(sW, function(namespace){
-    this.version = '0.1';
+    this.version = "0.1";
 
-    var __afterInitTrigger = 'sW.initFinished';
+    var __afterInitTrigger = "sW.initFinished";
     this.finishedInit = false;
 
     this.onInit = function(userCallback){
@@ -37,7 +37,7 @@ sW.Module(sW, function(namespace){
                 namespace.finishedInit = true;
             });
         }
-    }
+    };
 
     this.afterInit = function(callback){
         if (namespace.finishedInit){
@@ -45,5 +45,5 @@ sW.Module(sW, function(namespace){
         } else {
             namespace.Trigger.once(__afterInitTrigger, callback);
         }
-    }
+    };
 });

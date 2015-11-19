@@ -3,7 +3,7 @@
 */
 
 
-'use strict';
+"use strict";
 
 
 //Module "Trigger"
@@ -15,21 +15,21 @@ sW.Module(sW.Trigger, function(){
 
     this.on = function(trigger, callback){
         //set this up to fire callback every time trigger is called
-        if (typeof __callbacksToCallALot[trigger] == 'undefined'){
+        if (typeof __callbacksToCallALot[trigger] == "undefined"){
             __callbacksToCallALot[trigger] = [];
         }
 
         __callbacksToCallALot[trigger].push(callback);
-    }
+    };
 
     this.once = function(trigger, callback){
         //set this up to fire callback once on trigger being called
-        if (typeof __callbacksToCallOnce[trigger] == 'undefined'){
+        if (typeof __callbacksToCallOnce[trigger] == "undefined"){
             __callbacksToCallOnce[trigger] = [];
         }
 
         __callbacksToCallOnce[trigger].push(callback);
-    }
+    };
 
     this.off = function(trigger, callback){
         //if callback - remove all instances of callback from listening for trigger
@@ -65,7 +65,7 @@ sW.Module(sW.Trigger, function(){
             __callbacksToCallOnce = {};
             __callbacksToCallALot = {};
         }
-    }
+    };
 
     this.watching = function(){
         //returns array of triggers currently being watched
@@ -85,7 +85,7 @@ sW.Module(sW.Trigger, function(){
         });
 
         return watching;
-    }
+    };
 
     this.fire = function(trigger, value){
         //fires trigger name with value
@@ -108,6 +108,6 @@ sW.Module(sW.Trigger, function(){
                 cback(value, trigger);
             });
         }
-    }
+    };
 });
 //End "Trigger"
