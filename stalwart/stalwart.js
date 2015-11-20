@@ -8,7 +8,7 @@
     "use strict";
     
     if (!window.jQuery){
-        throw new ReferenceError('Stalwart requires you to include jQuery (2.1.4 recommended) first');
+        throw new ReferenceError("Stalwart requires you to include jQuery (2.1.4 recommended) first");
     }
 
     window.sW = {};
