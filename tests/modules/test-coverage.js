@@ -46,7 +46,7 @@ QUnit.moduleDone(function(obj){
 
     if (good){
         QUnit.module('Overall Test Coverage');
-        QUnit.test('Coverage of all members of sW object', function(){
+        QUnit.test('Coverage of all members of sW objects/functions', function(){
             QUnit.ok(sWNeedingTests.length === 0, 'sW Members Requiring Tests ('+sWNeedingTests.length+'): "'+sWNeedingTests+'"');
             sWFinishedModules.push('Overall Test Coverage'); //prevent refiring
         });

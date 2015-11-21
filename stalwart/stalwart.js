@@ -23,31 +23,31 @@
         //this==namespace, just a convenience
         definition.call(namespace, namespace);
     };
+
+    sW.Module(sW, function(namespace){
+        "use strict";
+
+        this.version = "0.1";
+
+        var __afterInitTrigger = "sW.initFinished";
+        this.finishedInit = false;
+
+        this.onInit = function(userCallback){
+            if (userCallback){
+                $(document).ready(function(){
+                    userCallback();
+                    namespace.Trigger.fire(__afterInitTrigger);
+                    namespace.finishedInit = true;
+                });
+            }
+        };
+
+        this.afterInit = function(callback){
+            if (namespace.finishedInit){
+                callback();
+            } else {
+                namespace.Trigger.once(__afterInitTrigger, callback);
+            }
+        };
+    });
 }());
-
-sW.Module(sW, function(namespace){
-    "use strict";
-
-    this.version = "0.1";
-
-    var __afterInitTrigger = "sW.initFinished";
-    this.finishedInit = false;
-
-    this.onInit = function(userCallback){
-        if (userCallback){
-            $(document).ready(function(){
-                userCallback();
-                namespace.Trigger.fire(__afterInitTrigger);
-                namespace.finishedInit = true;
-            });
-        }
-    };
-
-    this.afterInit = function(callback){
-        if (namespace.finishedInit){
-            callback();
-        } else {
-            namespace.Trigger.once(__afterInitTrigger, callback);
-        }
-    };
-});

@@ -2,10 +2,8 @@
 
 QUnit.module('Stalwart Core');
 
-QUnit.test('Version is correct', function(){
-    QUnit.equal(sW.version, '0.1');
-    tested('sW.version');
-});
+//ignores for attribute/constants that won't change/don't get value from tests
+tested('sW.version');
 
 sW.onInit(function(){
     QUnit.test('onInit callback called', function(){
