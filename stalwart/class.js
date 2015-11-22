@@ -44,9 +44,9 @@ sW.Module(sW, function(){
             return this.__exposed__[prop];
         };
 
-        var isExposed = function(cls, variable){
-            if (typeof cls.__exposed__ === "undefined" || !cls.__exposed__.hasOwnProperty(variable)){
-                throw new Error("Can only watch variables that are exposed, \""+variable+"\" is not");
+        definition.isExposed = function(variable){
+            if (typeof this.__exposed__ === "undefined" || !this.__exposed__.hasOwnProperty(variable)){
+                return false;
             }
             return true;
         };
@@ -71,8 +71,8 @@ sW.Module(sW, function(){
             //callback should take args (newValue, oldValue)
 
             checkWatchValues(this, variable);
-            if (!isExposed(this, variable)){
-                return;
+            if (!this.isExposed(variable)){
+                throw new Error("Can only watch variables that are exposed, \""+variable+"\" is not");
             }
 
             this.__watchers__[variable].push(callback);
@@ -155,6 +155,26 @@ sW.Module(sW, function(){
                     }
                 }
             }
+        }
+
+        definition.exposeProp = function(prop){
+            var cls = this;
+            var value = cls[prop];
+
+            if (typeof value === 'function'){
+                throw new Error('Cannot expose a function');
+            }
+
+            cls.__exposed__[prop] = value;
+
+            propGetter = function(){
+                return cls.__getAttr__ ? cls.__getAttr__(prop) : cls.__getExposed__(prop);
+            }
+            propSetter = function(value){
+                return cls.__setAttr__ ? cls.__setAttr__(prop, value) : cls.__setExposed__(prop, value);
+            }
+            cls.__defineGetter__(prop, propGetter);
+            cls.__defineSetter__(prop, propSetter);
         }
 
         if (definition.__public__){

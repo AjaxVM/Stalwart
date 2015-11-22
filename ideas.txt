@@ -32,3 +32,23 @@ Scripts will be loaded async so need to know what modules they declare and wait 
 Using require(script) and declare(...[module, names], ...) allows us to declare needed scripts to fulfil the requirements for the declaration.
 We could do declare(..., {module_name: script_path...}, ...) which might be better - this also allows us to piggy back these onto the declared namespaces instead of the default one
 So when you include a module have a namespace with it that goes in and trickles down if you will
+
+
+
+
+-----------------
+
+Handlers are attributes (either with a value or without) that are defined as Handlers in the app.
+sW.attachHandlers will find all of them and attach them to the elements they are found on
+
+There are a few predefined handlers:
+master (= value - string delimited for multiple)
+    master(s) are available to all elements inside the element set with it by name (for binding)
+    they are not given direct access to the dom, but are meant to expose values/functions to elements
+    Masters should be sW.Class objects that expose values for binding
+
+    Attributes that reference {master....} should place a watch on master/value and also set a function onchange to update it
+
+
+<body master='main-page'>
+    <h1 

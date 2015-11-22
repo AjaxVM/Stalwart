@@ -4,7 +4,8 @@
     <title>Project Stalwart</title>    
   </head>
   <body>
-    <h1>Hello World</h1>
+    <h1 master='test'></h1>
+    <h1 bind-to='master.value'>Hello World</h1>
   </body>
 
   <script src="../tests/external/jquery-2.1.4.js" type='text/javascript'></script>
@@ -14,10 +15,28 @@
   <script src='../stalwart/trigger.js' type='text/javascript'></script>
   <script src='../stalwart/utils.js' type='text/javascript'></script>
   <script src='../stalwart/class.js' type='text/javascript'></script>
+  <script src='../stalwart/handler.js' type='text/javascript'></script>
 
   <script type="text/javascript">
+    sW.Handler.Handler('master',
+                       {
+                        'silly': '?',
+                        'master': '=?'
+                       },
+                       function(element, masters, args){
+                        var t = 'my value is: '+args.master;
+                        if (args.silly){
+                          t += '<br/>and I am silly';
+                        } else {
+                          t += '<br/>and I am sad... :(';
+                        }
+                        console.log(element);
+                        element.html(t);
+                      });
     sW.onInit(function(){
       console.log('all loaded');
+      console.log(sW.Handler.allHandlers);
+      sW.Handler.attachHandlers();
     });
   </script>
 </html>
