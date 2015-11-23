@@ -32,7 +32,7 @@
                        },
                        function(element, args, parents){
                         //since this could be a bindable arg or a literal, let's check
-                        if (this.bindable(args['insert-value'])){
+                        if (this.bindable('insert-value')){
                           this.bindArg('insert_value', 'insert-value');
                         } else {
                           this.insert_value = args['insert-value'];
@@ -41,7 +41,6 @@
                         //if this were an input that can change the value we would
                         //need to handle that as well
                         var makeMyString = function(value){
-                          console.log(0);
                           var t = 'my value is: '+value;
                           if (args.silly){
                             t += '<br/>and I am silly';

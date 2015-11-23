@@ -48,8 +48,8 @@ sW.Module(sW.Handler, function(namespace){
             }
 
             this.bindable = function(arg){
-                    return typeof this.__expectBindables__[arg] !== 'undefined';
-                }
+                return typeof this.__expectBindables__[arg] !== 'undefined';
+            }
 
             this.bindArg = function(myVar, arg){
                 if (!this.bindable(arg)){
