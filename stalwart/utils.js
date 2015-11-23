@@ -92,6 +92,9 @@ sW.Module(sW.Utils, function(namespace){
     this.formatString.default_separator = "{,}";
 
     this.getAllAttrsFromElement = function(ele){
+        if (typeof ele.attributes === 'undefined'){
+            ele = ele[0];
+        }
         var attrs = {};
 
         namespace.forEach(ele.attributes, function(key, value){
