@@ -11,33 +11,64 @@ sW.Module(sW.Handler, function(namespace){
     this.Handler = function(name, expects, definition){
         //definition can take the following args:
         //element
-        //masters (obj with key:value pairs of masterNames:masters)
         //args (obj with keys with attrs you want resolved in the fashion specified)
+        //parents (obj with key:value pairs of parentNames:parents)
 
         //first create the "handler" class
         namespace.allHandlers[name] = sW.Class('sW.Handler.'+name, function(){
             //automatically runs definition inside of this.__init__ and exposes anything set inside itself
-            this.__init__ = function(element, masters){
-                var args = this.__resolveExpects__(element, masters);
+            this.__init__ = function(element, parents, attrs){
+                var args = this.__resolveExpects__(element, parents, attrs);
                 var orig_keys = Object.keys(this);
 
-                definition.call(this, $(element), masters, args);
-
+                //override these functions to always force them
+                //since we will be exposing all of these attrs after declaration anyway
+                //this done here, so we have access to sW.Class.listen
                 var cls = this;
-                console.log(cls);
+                var oldListen = this.listen,
+                    oldWatch = this.watch,
+                    oldBind = this.bind;
+                this.listen = function(variable, callback){
+                    oldListen.call(this, variable, callback, true);
+                }
+                this.watch = function(var1, obj2, var2){
+                    oldWatch.call(this, var1, obj2, var2, true);
+                }
+                this.bind = function(var1, obj2, var2){
+                    oldBind.call(this, var1, obj2, var2, true);
+                }
+
+                definition.call(this, $(element), args, parents);
 
                 $.each(Object.keys(this), function(i, key){
-                    if (key !== '__exposed__' && orig_keys.indexOf(key) === -1 && !cls.isExposed(key)){
+                    if (key.indexOf('__') !== 0 && orig_keys.indexOf(key) === -1 && !cls.isExposed(key) && typeof cls[key] !== 'function'){
                         cls.exposeProp(key);
                     }
                 });
             }
 
-            this.__resolveExpects__ = function(element, masters){
-                var attrs = sW.Utils.getAllAttrsFromElement(element);
+            this.bindable = function(arg){
+                    return typeof this.__expectBindables__[arg] !== 'undefined';
+                }
+
+            this.bindArg = function(myVar, arg){
+                if (!this.bindable(arg)){
+                    throw new Error('Expected Argument "'+arg+'" is not bindable, be sure to use the @ (or @=) expect symbol');
+                }
+                var foundObj = this.__expectBindables__[arg][0];
+                var foundKey = this.__expectBindables__[arg][1];
+
+                this.bind(myVar, foundObj, foundKey);
+            }
+
+            this.__resolveExpects__ = function(element, parents, attrs){
                 var attr,
+                    foundValue,
+                    foundObj,
+                    foundKey,
                     cls = this,
                     found = {};
+                this.__expectBindables__ = {};
                 $.each(expects, function(key, value){
                     attr = attrs[key];
                     var allow_questionable = false;
@@ -48,33 +79,47 @@ sW.Module(sW.Handler, function(namespace){
 
                     //simples, check if attr is there at all
                     if (value === '' && allow_questionable){
-                        found[key] = namespace.handleAttrExists(attr);
+                        found[key] = namespace.convertAttrExists(attr);
                     //check if we are assigning to a literal (simple only for now)
                     } else if (value === '='){
-                        found[key] = namespace.handleAttrLiteral(masters, attr, allow_questionable);
-                    //return obj,value for binding purposes :)
+                        found[key] = namespace.convertAttrLiteral(parents, attr, allow_questionable);
+                    //return obj.key (one-time binding) and exposes obj and key for binding
                     } else if (value === '@'){
-                        //I think I have to return the master object and the varname here, not just the varname
-                        found[key] = namespace.handleAttrWatch(masters, attr, allow_questionable);
+                        //I think I have to return the parent object and the varname here, not just the varname
+                        foundValue = namespace.convertAttrWatch(parents, attr, allow_questionable);
+                        foundObj = foundValue[0];
+                        foundKey = foundValue[1];
+                        found[key] = foundObj[foundKey];
+                        cls.__expectBindables__[key] = [foundObj, foundKey];
+                    //check if a composite (=@/@=) which checks if bindable or value
+                    } else if (value === '@=' || value === '=@'){
+                        var foundValue = namespace.convertAttrWatch(parents, attr, allow_questionable);
+                        if (typeof foundValue === 'undefined'){
+                            foundValue = namespace.convertAttrLiteral(parents, attr, allow_questionable);
+                        } else {
+                            foundObj = foundValue[0];
+                            foundKey = foundValue[1];
+                            foundValue = foundObj[foundKey];
+                            cls.__expectBindables__[key] = [foundObj, foundKey];
+                        }
+                        found[key] = foundValue;
                     }
                 });
-
-                console.log(found);
 
                 return found;
             }
         });
     }
 
-    //helper functions
-    this.handleAttrExists = function(attr){
+    //conversion functions
+    this.convertAttrExists = function(attr){
         //handles whether the attr is present or not
         if (typeof attr === 'undefined'){
             return false;
         }
         return true;
     }
-    this.handleAttrLiteral = function(masters, attr, allow_questionable){
+    this.convertAttrLiteral = function(parents, attr, allow_questionable){
         //handles simple Javascript literals (string, boolean, number)
 
         //if undefined and allow_questionable, return null, not false
@@ -103,7 +148,7 @@ sW.Module(sW.Handler, function(namespace){
         }
         return attr;
     }
-    this.handleAttrWatch = function(masters, attr, allow_questionable){
+    this.convertAttrWatch = function(parents, attr, allow_questionable){
         if (typeof attr === 'undefined'){
             if (allow_questionable){
                 return null;
@@ -112,46 +157,82 @@ sW.Module(sW.Handler, function(namespace){
             }
         }
 
-        //find the true master, ie, second-last element (splitting on .)
+        //find the true parent, ie, second-last element (splitting on .)
         var nodes = attr.split('.');
-        var master, value;
+        var parent, value;
 
-        if (nodes.length === 1){
-            throw new Error('No master declared, use ^.attr for nearest master');
-        }
+        // if (nodes.length === 1){
+        //     throw new Error('No parent declared, use ^.attr for nearest parent');
+        // }
 
-        //find top-level master
-        //if ^ is top master, grab most recent
-        if (nodes[0] === '^'){
-            master = masters._listed[0];
-        } else {
-            master = masters[nodes[0]];
-        }
+        //find top-level parent
+        //if ^ is top parent, grab first
+        //this should be the first handler on parent, but order isn't guaranteed
+        parent = parents[nodes[0]];
 
         nodes.splice(0,1);
         $.each(nodes, function(i, v){
             if (i === nodes.length-1){
                 value = v;
             } else {
-                master = master[v];
+                parent = parent[v];
             }
         });
 
-        return [master, value];
+        return typeof parent !== 'undefined' ? [parent, value] : undefined;
     }
 
-
-    this.attachHandlers = function(){
-        $.each(namespace.allHandlers, function(key, value){
-            $.each($('['+key+']'), function(i, element){
-                var handler = new value(element, {_listed:[]});
+    var grabHandlersFrom = function(element){
+        //if handlers appear more than once, only the nearest parent is used
+        //TODO: how to handle if we are using
+        var handlers = {};
+        var myHandlers = $.data(element, '_handlers');
+        //first grab our own
+        if (typeof myHandlers !== 'undefined'){
+            $.each(myHandlers, function(key, value){
+                if (typeof handlers[key] === 'undefined'){
+                    handlers[key] = value;
+                }
             });
-        });
-    }
-    //TODO, bind handlers to values, ie <div sw-handler="xxx">
-    //or <div sw-handlers="xxx,yyy,zzz">
+        }
+        //grab handlers from our immediate parent (which should chain up)
+        //if we are window.body return (highest allowed node)
+        if (element !== document.body){
+            $.each(grabHandlersFrom(element.parentElement), function(key, value){
+                if (typeof handlers[key] === 'undefined'){
+                    handlers[key] = value;
+                }
+            });
+        }
 
-    //or do something similar to angular directives?
-    //<div my-handle></div>
-    //sW.Handle.Handler('my-handle', function(element){})
+        return handlers;
+    }
+
+    this.runHandlers = function(){
+        //bind as a handler name to the value of the attr (if any), or just use the handler name
+        var element = document.body;
+        if (arguments.length > 0){
+            element = arguments[0];
+        }
+        //grab attrs of the element
+        var attrs = sW.Utils.getAllAttrsFromElement(element);
+        var parents = grabHandlersFrom(element);
+
+        $.each(namespace.allHandlers, function(key, h){
+            if (attrs.hasOwnProperty(key)){
+                var handler = new h(element, parents, attrs);
+                var data = $.data(element, '_handlers');
+                if (typeof $.data(element, '_handlers') === 'undefined'){
+                    data = {};
+                    $.data(element, '_handlers', data);
+                }
+                data[attrs[key] || key] = handler;
+            }
+        });
+
+        $.each(element.children, function(i, value){
+            namespace.runHandlers(value);
+        });
+        
+    }
 });

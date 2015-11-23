@@ -64,14 +64,14 @@ sW.Module(sW, function(){
             }
         };
 
-        definition.listen = function(variable, callback){
+        definition.listen = function(variable, callback, force){
             //attaches callback to fire whenever variable is updated
             //variable must be exposed before assigning watches
             //returns function that deregisters watch
             //callback should take args (newValue, oldValue)
 
             checkWatchValues(this, variable);
-            if (!this.isExposed(variable)){
+            if (!this.isExposed(variable) && !force){
                 throw new Error("Can only watch variables that are exposed, \""+variable+"\" is not");
             }
 
@@ -89,7 +89,7 @@ sW.Module(sW, function(){
             return removeListener;
         };
 
-        definition.watch = function(var1, obj2, var2){
+        definition.watch = function(var1, obj2, var2, force){
             //one-way binding of this.var1 to obj2.var2
             //requires only that this exposes var1 and obj2 exposes var2
             //returns function to call to unbind
@@ -107,14 +107,14 @@ sW.Module(sW, function(){
                 }
             };
 
-            return obj2.listen(var2, listenerFunc);
+            return obj2.listen(var2, listenerFunc, force);
         };
 
-        definition.bind = function(var1, obj2, var2){
+        definition.bind = function(var1, obj2, var2, force){
             //two-way binding of this.var1 to obj2.var2
             //bindings only fire if a value is changed to a non-equal value (prevents infinite loops)
-            var unbind1 = this.watch(var1, obj2, var2);
-            var unbind2 = obj2.watch(var2, this, var1);
+            var unbind1 = this.watch(var1, obj2, var2, force);
+            var unbind2 = obj2.watch(var2, this, var1, force);
 
             return function(){unbind1();unbind2();};
         };
@@ -167,10 +167,10 @@ sW.Module(sW, function(){
 
             cls.__exposed__[prop] = value;
 
-            propGetter = function(){
+            var propGetter = function(){
                 return cls.__getAttr__ ? cls.__getAttr__(prop) : cls.__getExposed__(prop);
             }
-            propSetter = function(value){
+            var propSetter = function(value){
                 return cls.__setAttr__ ? cls.__setAttr__(prop, value) : cls.__setExposed__(prop, value);
             }
             cls.__defineGetter__(prop, propGetter);

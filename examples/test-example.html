@@ -3,8 +3,11 @@
   <head>
     <title>Project Stalwart</title>    
   </head>
-  <body>
-    <h1 master='test'></h1>
+  <body master>
+    <h1 insert-me='insert-me1' insert-value='master.fruit'>
+      <div insert-me='should-not-be-called' insert-value='ignore me please'></div>
+    </h1>
+    <div insert-me='wtf?' insert-value='wooloo' silly></div>
     <h1 bind-to='master.value'>Hello World</h1>
   </body>
 
@@ -18,25 +21,44 @@
   <script src='../stalwart/handler.js' type='text/javascript'></script>
 
   <script type="text/javascript">
-    sW.Handler.Handler('master',
+    sW.Handler.Handler('master', {}, function(element, args, parents){
+      this.fruit = 'apple';
+      console.log(this);
+    });
+    sW.Handler.Handler('insert-me',
                        {
                         'silly': '?',
-                        'master': '=?'
+                        'insert-value': '@=?'
                        },
-                       function(element, masters, args){
-                        var t = 'my value is: '+args.master;
-                        if (args.silly){
-                          t += '<br/>and I am silly';
+                       function(element, args, parents){
+                        //since this could be a bindable arg or a literal, let's check
+                        if (this.bindable(args['insert-value'])){
+                          this.bindArg('insert_value', 'insert-value');
                         } else {
-                          t += '<br/>and I am sad... :(';
+                          this.insert_value = args['insert-value'];
                         }
-                        console.log(element);
-                        element.html(t);
+                        //set values, also set up a listener to update this
+                        //if this were an input that can change the value we would
+                        //need to handle that as well
+                        var makeMyString = function(value){
+                          console.log(0);
+                          var t = 'my value is: '+value;
+                          if (args.silly){
+                            t += '<br/>and I am silly';
+                          } else {
+                            t += '<br/>and I am sad... :(';
+                          }
+                          return t;
+                        }
+                        element.html(makeMyString(this.insert_value));
+                        this.listen('insert_value', function(value){
+                          element.html(makeMyString(value));
+                        });
                       });
     sW.onInit(function(){
       console.log('all loaded');
       console.log(sW.Handler.allHandlers);
-      sW.Handler.attachHandlers();
+      sW.Handler.runHandlers();
     });
   </script>
 </html>
