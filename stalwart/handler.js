@@ -8,17 +8,29 @@ sW.Module(sW.Handler, function(namespace){
 
     this.allHandlers = {};
 
-    this.Handler = function(name, expects, definition){
+    // this.Handler = function(name, expects, definition){
+    this.Handler = function(structure){
         //definition can take the following args:
         //element
         //args (obj with keys with attrs you want resolved in the fashion specified)
         //parents (obj with key:value pairs of parentNames:parents)
 
+        var name, expects, definition, handlerValue;
+        name = structure.name;
+        if (typeof name !== 'string'){
+            throw new Error('sW.Handler.Handler requires a name of type string');
+        }
+        expects = structure.expects || {};
+        definition = structure.definition;
+        handlerValue = structure.handlerValue || 'alias';
+        //options are alias (name handler is bound to element with),
+        //            value (binds the value onto the args as handlerValue)
+
         //first create the "handler" class
         namespace.allHandlers[name] = sW.Class('sW.Handler.'+name, function(){
             //automatically runs definition inside of this.__init__ and exposes anything set inside itself
-            this.__init__ = function(element, parents, attrs){
-                var args = this.__resolveExpects__(element, parents, attrs);
+            this.__init__ = function(element, parents, attrs, handlerValue){
+                var args = this.__resolveExpects__(element, parents, attrs, handlerValue);
                 var orig_keys = Object.keys(this);
 
                 //override these functions to always force them
@@ -61,7 +73,7 @@ sW.Module(sW.Handler, function(namespace){
                 this.bind(myVar, foundObj, foundKey);
             }
 
-            this.__resolveExpects__ = function(element, parents, attrs){
+            this.__resolveExpects__ = function(element, parents, attrs, handlerValue){
                 var attr,
                     foundValue,
                     foundObj,
@@ -69,6 +81,10 @@ sW.Module(sW.Handler, function(namespace){
                     cls = this,
                     found = {};
                 this.__expectBindables__ = {};
+                if (typeof handlerValue !== 'undefined' && handlerValue !== 'alias'){
+                    //found['handlerValue'] = handlerValue;
+                    expects[name] = handlerValue;
+                }
                 $.each(expects, function(key, value){
                     attr = attrs[key];
                     var allow_questionable = false;
@@ -109,6 +125,8 @@ sW.Module(sW.Handler, function(namespace){
                 return found;
             }
         });
+        //attach the method for handling value here:
+        namespace.allHandlers[name].handlerValue = handlerValue;
     }
 
     //conversion functions
@@ -219,14 +237,20 @@ sW.Module(sW.Handler, function(namespace){
         var parents = grabHandlersFrom(element);
 
         $.each(namespace.allHandlers, function(key, h){
+            var handlerValue = h.handlerValue;
             if (attrs.hasOwnProperty(key)){
-                var handler = new h(element, parents, attrs);
+                var handler = new h(element, parents, attrs, handlerValue);
                 var data = $.data(element, '_handlers');
                 if (typeof $.data(element, '_handlers') === 'undefined'){
                     data = {};
                     $.data(element, '_handlers', data);
                 }
-                data[attrs[key] || key] = handler;
+                //store handler by name specified
+                var alias = key;
+                if (handlerValue === 'alias'){
+                    var alias = attrs[key] || key;
+                }
+                data[alias] = handler;
             }
         });
 

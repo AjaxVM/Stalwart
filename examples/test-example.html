@@ -8,7 +8,7 @@
       <div insert-me='should-not-be-called' insert-value='ignore me please'></div>
     </h1>
     <div insert-me='wtf?' insert-value='wooloo' silly></div>
-    <h1 bind-to='master.value'>Hello World</h1>
+    <h1 bind-to='master.fruit'>Hello World</h1>
   </body>
 
   <script src="../tests/external/jquery-2.1.4.js" type='text/javascript'></script>
@@ -21,17 +21,22 @@
   <script src='../stalwart/handler.js' type='text/javascript'></script>
 
   <script type="text/javascript">
-    sW.Handler.Handler('master', {}, function(element, args, parents){
-      this.fruit = 'apple';
-      console.log(this);
+    sW.Handler.Handler({
+      name: 'master',
+      expects: {},
+      definition: function(element, args, parents){
+        this.fruit = 'apple';
+        console.log(this);
+      }
     });
-    sW.Handler.Handler(
-      'insert-me',
-      {
+    sW.Handler.Handler({
+      name: 'insert-me',
+      expects: {
        'silly': '?',
        'insert-value': '@=?'
       },
-      function(element, args, parents){
+      handlerValue: 'alias',
+      definition: function(element, args, parents){
        //since this could be a bindable arg or a literal, let's check
         if (this.bindable('insert-value')){
           this.bindArg('insert_value', 'insert-value');
@@ -55,7 +60,22 @@
           element.html(makeMyString(value));
         });
       }
-    );
+    });
+    sW.Handler.Handler({
+      name: 'bind-to',
+      handlerValue: '@',
+      expects: {},
+      definition: function(element, args, parents){
+        //bind an internal variable to args['bind-to']
+        this.bindArg('target', 'bind-to');
+
+        //set initial value
+        element.text(this.target);
+
+        //TODO
+        //check if this is an input, and onchange/oninput (depending on type) to update this.target;
+      }
+    });
     sW.onInit(function(){
       console.log('all loaded');
       console.log(sW.Handler.allHandlers);
