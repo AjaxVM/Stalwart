@@ -25,35 +25,37 @@
       this.fruit = 'apple';
       console.log(this);
     });
-    sW.Handler.Handler('insert-me',
-                       {
-                        'silly': '?',
-                        'insert-value': '@=?'
-                       },
-                       function(element, args, parents){
-                        //since this could be a bindable arg or a literal, let's check
-                        if (this.bindable('insert-value')){
-                          this.bindArg('insert_value', 'insert-value');
-                        } else {
-                          this.insert_value = args['insert-value'];
-                        }
-                        //set values, also set up a listener to update this
-                        //if this were an input that can change the value we would
-                        //need to handle that as well
-                        var makeMyString = function(value){
-                          var t = 'my value is: '+value;
-                          if (args.silly){
-                            t += '<br/>and I am silly';
-                          } else {
-                            t += '<br/>and I am sad... :(';
-                          }
-                          return t;
-                        }
-                        element.html(makeMyString(this.insert_value));
-                        this.listen('insert_value', function(value){
-                          element.html(makeMyString(value));
-                        });
-                      });
+    sW.Handler.Handler(
+      'insert-me',
+      {
+       'silly': '?',
+       'insert-value': '@=?'
+      },
+      function(element, args, parents){
+       //since this could be a bindable arg or a literal, let's check
+        if (this.bindable('insert-value')){
+          this.bindArg('insert_value', 'insert-value');
+        } else {
+          this.insert_value = args['insert-value'];
+        }
+        //set values, also set up a listener to update this
+        //if this were an input that can change the value we would
+        //need to handle that as well
+        var makeMyString = function(value){
+          var t = 'my value is: '+value;
+          if (args.silly){
+            t += '<br/>and I am silly';
+          } else {
+            t += '<br/>and I am sad... :(';
+          }
+          return t;
+        }
+        element.html(makeMyString(this.insert_value));
+        this.listen('insert_value', function(value){
+          element.html(makeMyString(value));
+        });
+      }
+    );
     sW.onInit(function(){
       console.log('all loaded');
       console.log(sW.Handler.allHandlers);
