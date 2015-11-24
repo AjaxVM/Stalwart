@@ -3,12 +3,12 @@
   <head>
     <title>Project Stalwart</title>    
   </head>
-  <body master>
-    <h1 insert-me='insert-me1' insert-value='master.fruit'>
+  <body master='my-master'>
+    <h1 insert-me='insert-me1' insert-value='my-master.fruit'>
       <div insert-me='should-not-be-called' insert-value='ignore me please'></div>
     </h1>
     <div insert-me='wtf?' insert-value='wooloo' silly></div>
-    <h1 bind-to='master.fruit'>Hello World</h1>
+    <h1 bind-to='my-master.fruit'>Hello World</h1>
   </body>
 
   <script src="../tests/external/jquery-2.1.4.js" type='text/javascript'></script>
