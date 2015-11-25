@@ -64,14 +64,21 @@ sW.Module(sW, function(){
             }
         };
 
-        definition.listen = function(variable, callback, force){
+        definition.clearListeners = function(){
+            for (var i=0; i<this.__myListenerUnbinds__.length; i++){
+                this.__myListenerUnbinds__[i]();
+            }
+            this.__myListenerUnbinds__ = [];
+        }
+
+        definition.listen = function(variable, callback){
             //attaches callback to fire whenever variable is updated
             //variable must be exposed before assigning watches
             //returns function that deregisters watch
             //callback should take args (newValue, oldValue)
 
             checkWatchValues(this, variable);
-            if (!this.isExposed(variable) && !force){
+            if (!this.isExposed(variable)){
                 throw new Error("Can only watch variables that are exposed, \""+variable+"\" is not");
             }
 
@@ -86,11 +93,14 @@ sW.Module(sW, function(){
                 }
             };
 
+            this.__myListenerUnbinds__.push(removeListener);
+
             return removeListener;
         };
 
-        definition.watch = function(var1, obj2, var2, force){
+        definition.watch = function(var1, obj2, var2, callback){
             //one-way binding of this.var1 to obj2.var2
+            //optionally takes an additional callback to fire on changes
             //requires only that this exposes var1 and obj2 exposes var2
             //returns function to call to unbind
             var obj1 = this;
@@ -104,17 +114,23 @@ sW.Module(sW, function(){
                 if (value !== obj1.__exposed__[var1]){
                     //we set using the setter though, so it will fire it's watchers and not break the chain
                     obj1[var1] = value;
+                    //fire callback
+                    if (callback){
+                        callback(value);
+                    }
                 }
             };
 
-            return obj2.listen(var2, listenerFunc, force);
+            var x = obj2.listen(var2, listenerFunc);
+            this.__myListenerUnbinds__.push(x);
+            return x;
         };
 
-        definition.bind = function(var1, obj2, var2, force){
+        definition.bind = function(var1, obj2, var2, callback){
             //two-way binding of this.var1 to obj2.var2
             //bindings only fire if a value is changed to a non-equal value (prevents infinite loops)
-            var unbind1 = this.watch(var1, obj2, var2, force);
-            var unbind2 = obj2.watch(var2, this, var1, force);
+            var unbind1 = this.watch(var1, obj2, var2, callback);
+            var unbind2 = obj2.watch(var2, this, var1, callback);
 
             return function(){unbind1();unbind2();};
         };
@@ -157,26 +173,6 @@ sW.Module(sW, function(){
             }
         }
 
-        definition.exposeProp = function(prop){
-            var cls = this;
-            var value = cls[prop];
-
-            if (typeof value === 'function'){
-                throw new Error('Cannot expose a function');
-            }
-
-            cls.__exposed__[prop] = value;
-
-            var propGetter = function(){
-                return cls.__getAttr__ ? cls.__getAttr__(prop) : cls.__getExposed__(prop);
-            }
-            var propSetter = function(value){
-                return cls.__setAttr__ ? cls.__setAttr__(prop, value) : cls.__setExposed__(prop, value);
-            }
-            cls.__defineGetter__(prop, propGetter);
-            cls.__defineSetter__(prop, propSetter);
-        }
-
         if (definition.__public__){
             //ensure definition.__public__ has only unique values
             definition.__public__ = definition.__public__.filter(function(value, index, cls){
@@ -204,6 +200,7 @@ sW.Module(sW, function(){
 
         var sWClassObject = function(){
             this.__exposed__ = {};
+            this.__myListenerUnbinds__ = [];
             if (this.__init__){
                 this.__init__.apply(this, arguments);
             }

@@ -3,6 +3,21 @@
 */
 
 
+//update jQuery to fire a removed event
+//thanks to: http://stackoverflow.com/a/13923700
+//TODO: is there a better way to handle this, really?
+//other libs (specifically jQuery UI in this case) use the same/similar method
+//perhaps it is better to create methods to handle these actions that should be used instead of raw jquery...
+$.cleanData = (function(orig){
+    return function(elems){
+        for (var i=0; i<elems.length; i++){
+            var elem = $(elems[i]);
+            elem.triggerHandler('sWCleaned');
+        }
+        orig(elems);
+    }
+})($.cleanData);
+
 sW.Handler = {};
 sW.Module(sW.Handler, function(namespace){
 
@@ -23,54 +38,61 @@ sW.Module(sW.Handler, function(namespace){
         expects = structure.expects || {};
         definition = structure.definition;
         handlerValue = structure.handlerValue || 'alias';
+        __public__ = structure.exposes || [];
         //options are alias (name handler is bound to element with),
         //            value (binds the value onto the args as handlerValue)
 
         //first create the "handler" class
         namespace.allHandlers[name] = sW.Class('sW.Handler.'+name, function(){
+            this.__public__ = __public__;
             //automatically runs definition inside of this.__init__ and exposes anything set inside itself
             this.__init__ = function(element, parents, attrs, handlerValue){
                 var args = this.__resolveExpects__(element, parents, attrs, handlerValue);
-                var orig_keys = Object.keys(this);
-
-                //override these functions to always force them
-                //since we will be exposing all of these attrs after declaration anyway
-                //this done here, so we have access to sW.Class.listen
-                var cls = this;
-                var oldListen = this.listen,
-                    oldWatch = this.watch,
-                    oldBind = this.bind;
-                this.listen = function(variable, callback){
-                    oldListen.call(this, variable, callback, true);
-                }
-                this.watch = function(var1, obj2, var2){
-                    oldWatch.call(this, var1, obj2, var2, true);
-                }
-                this.bind = function(var1, obj2, var2){
-                    oldBind.call(this, var1, obj2, var2, true);
-                }
-
                 definition.call(this, $(element), args, parents);
 
-                $.each(Object.keys(this), function(i, key){
-                    if (key.indexOf('__') !== 0 && orig_keys.indexOf(key) === -1 && !cls.isExposed(key) && typeof cls[key] !== 'function'){
-                        cls.exposeProp(key);
-                    }
+                //make sure we teardown after things go away
+                var cls = this;
+                $(element).on('sWCleaned', function(){
+                    console.log('clearing:', this);
+                    cls.clearListeners();
                 });
             }
+
+            //TODO: do we need two-way binding on this? or just ways to update/listen to values?
 
             this.bindable = function(arg){
                 return typeof this.__expectBindables__[arg] !== 'undefined';
             }
 
-            this.bindArg = function(myVar, arg){
+            this.getArg = function(arg){
+                return this.__expectBindables__[arg][0][this.__expectBindables__[arg][1]];
+            }
+            this.setArg = function(arg, value){
+                this.__expectBindables__[arg][0][this.__expectBindables__[arg][1]] = value;
+            }
+
+            this.listenArg = function(arg, callback){
+                var foundObj = this.__expectBindables__[arg][0];
+                var foundKey = this.__expectBindables__[arg][1];
+
+                foundObj.listen(foundKey, callback);
+            }
+
+            this.watchArg = function(myVar, arg, callback){
+                var foundObj = this.__expectBindables__[arg][0];
+                var foundKey = this.__expectBindables__[arg][1];
+
+                this.watch(myVar, foundObj, foundKey, callback);
+            }
+
+            this.bindArg = function(myVar, arg, callback){
                 if (!this.bindable(arg)){
                     throw new Error('Expected Argument "'+arg+'" is not bindable, be sure to use the @ (or @=) expect symbol');
                 }
                 var foundObj = this.__expectBindables__[arg][0];
                 var foundKey = this.__expectBindables__[arg][1];
 
-                this.bind(myVar, foundObj, foundKey);
+                this.bind(myVar, foundObj, foundKey, callback);
             }
 
             this.__resolveExpects__ = function(element, parents, attrs, handlerValue){
