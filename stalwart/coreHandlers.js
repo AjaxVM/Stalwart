@@ -19,7 +19,7 @@ sW.Module(sW.Handler, function(namespace){
     });
 
     this.Handler({
-        //this handler will bind element.value to sw-value (two-way)
+        //this handler will bind element.value to sw-value (two-way) (also works for select/option values)
         name: 'sw-value',
         handlerValue: '@',
         definition: function(element, args, parents){
@@ -30,9 +30,14 @@ sW.Module(sW.Handler, function(namespace){
             update(args['sw-value']);
 
             var cls = this;
-            element.on('input', function(){
-                cls.setArg('sw-value', element.val());
-            });
+            var change = function(){
+                var val = element.val();
+                if (val !== cls.getArg('sw-value')){
+                    cls.setArg('sw-value', val);
+                }
+            }
+            element.on('input', change);
+            element.on('change', change);
         }
     });
 
