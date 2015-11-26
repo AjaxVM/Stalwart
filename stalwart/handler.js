@@ -222,7 +222,7 @@ sW.Module(sW.Handler, function(namespace){
         return typeof parent !== 'undefined' ? [parent, value] : undefined;
     }
 
-    var grabHandlersFrom = function(element){
+    this.grabHandlersFrom = function(element){
         //if handlers appear more than once, only the nearest parent is used
         //TODO: how to handle if we are using
         var handlers = {};
@@ -238,7 +238,7 @@ sW.Module(sW.Handler, function(namespace){
         //grab handlers from our immediate parent (which should chain up)
         //if we are window.body return (highest allowed node)
         if (element !== document.body){
-            $.each(grabHandlersFrom(element.parentElement), function(key, value){
+            $.each(this.grabHandlersFrom(element.parentElement), function(key, value){
                 if (typeof handlers[key] === 'undefined'){
                     handlers[key] = value;
                 }
@@ -256,7 +256,7 @@ sW.Module(sW.Handler, function(namespace){
         }
         //grab attrs of the element
         var attrs = sW.Utils.getAllAttrsFromElement(element);
-        var parents = grabHandlersFrom(element);
+        var parents = this.grabHandlersFrom(element);
 
         $.each(namespace.allHandlers, function(key, h){
             var handlerValue = h.handlerValue;
@@ -279,6 +279,5 @@ sW.Module(sW.Handler, function(namespace){
         $.each(element.children, function(i, value){
             namespace.runHandlers(value);
         });
-        
     }
 });

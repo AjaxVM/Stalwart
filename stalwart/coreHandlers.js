@@ -49,4 +49,14 @@ sW.Module(sW.Handler, function(namespace){
             element.on('click', this.getArg('sw-click'));
         }
     });
+
+    //TODO: add sw-repeat handler
+    //there are a few concerns with this, mainly on watching if an object/array changes, to update
+    //also, need to be able to bind new elements in with handlers, and make sure that this element is used as a template only
+    //the other handlers on it don't fire
+
+    //actually, now that we have Class.mutated(prop), we can simply rely on any changes to an exposed value
+    //having mutated(prop) called after the changes - ie obj.people[12] = 'Bob';obj.mutated('people');
+    //this now only sends you the current value, not the "old" value - once must keep track of the old value
+    //and compare vs this new value if that is desired
 });

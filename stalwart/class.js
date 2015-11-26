@@ -28,16 +28,17 @@ sW.Module(sW, function(){
         definition.__parents = [];
         definition.__className = __className;
 
-        definition.__setExposed__ = function(prop, value){
-            //set ours first, but track old value, then call watchers
-            //this prevents recursion when binding
-            var oldValue = this.__exposed__[prop];
-            this.__exposed__[prop] = value;
+        definition.mutated = function(prop){
             if (this.__watchers__ && this.__watchers__[prop]){
                 for (var i=0; i<this.__watchers__[prop].length; i++){
-                    this.__watchers__[prop][i](value, oldValue);
+                    this.__watchers__[prop][i](this.__exposed__[prop]);
                 }
             }
+        }
+
+        definition.__setExposed__ = function(prop, value){
+            this.__exposed__[prop] = value;
+            this.mutated(prop);
         };
 
         definition.__getExposed__ = function(prop){
