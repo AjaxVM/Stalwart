@@ -30,7 +30,7 @@ sW.Module(sW.Handler, function(namespace){
         //args (obj with keys with attrs you want resolved in the fashion specified)
         //parents (obj with key:value pairs of parentNames:parents)
 
-        var name, expects, definition, handlerValue;
+        var name, expects, definition, handlerValue, __public__, manageChildren;
         name = structure.name;
         if (typeof name !== 'string'){
             throw new Error('sW.Handler.Handler requires a name of type string');
@@ -39,16 +39,19 @@ sW.Module(sW.Handler, function(namespace){
         definition = structure.definition;
         handlerValue = structure.handlerValue || 'alias';
         __public__ = structure.exposes || [];
+        runChildren = structure.runChildren || false;
         //options are alias (name handler is bound to element with),
         //            value (binds the value onto the args as handlerValue)
 
         //first create the "handler" class
         namespace.allHandlers[name] = sW.Class('sW.Handler.'+name, function(){
             this.__public__ = __public__;
+            this.runChildren = runChildren;
             //automatically runs definition inside of this.__init__ and exposes anything set inside itself
-            this.__init__ = function(element, parents, attrs, handlerValue){
-                var args = this.__resolveExpects__(element, parents, attrs, handlerValue);
-                definition.call(this, $(element), args, parents);
+            this.__init__ = function(element, parents, attrs, handlerValue, args){
+                //var args = this.__resolveExpects__(element, parents, attrs, handlerValue);
+                this.__args__ = this.__resolveExpects__(element, parents, attrs, handlerValue, args);
+                definition.call(this, $(element), this.__args__, parents);
 
                 //make sure we teardown after things go away
                 var cls = this;
@@ -65,9 +68,12 @@ sW.Module(sW.Handler, function(namespace){
             }
 
             this.getArg = function(arg){
-                return this.__expectBindables__[arg][0][this.__expectBindables__[arg][1]];
+                if (typeof this.__expectBindables__[arg] !== 'undefined'){
+                    return this.__expectBindables__[arg][0][this.__expectBindables__[arg][1]];
+                }
+                return this.__args__[arg];
             }
-            this.setArg = function(arg, value){
+            this.setArg = function(arg, value, args){
                 this.__expectBindables__[arg][0][this.__expectBindables__[arg][1]] = value;
             }
 
@@ -95,13 +101,13 @@ sW.Module(sW.Handler, function(namespace){
                 this.bind(myVar, foundObj, foundKey, callback);
             }
 
-            this.__resolveExpects__ = function(element, parents, attrs, handlerValue){
+            this.__resolveExpects__ = function(element, parents, attrs, handlerValue, passedArgs){
                 var attr,
                     foundValue,
                     foundObj,
                     foundKey,
                     cls = this,
-                    found = {};
+                    found = passedArgs || {};
                 this.__expectBindables__ = {};
                 if (typeof handlerValue !== 'undefined' && handlerValue !== 'alias'){
                     //found['handlerValue'] = handlerValue;
@@ -125,6 +131,9 @@ sW.Module(sW.Handler, function(namespace){
                     } else if (value === '@'){
                         //I think I have to return the parent object and the varname here, not just the varname
                         foundValue = namespace.convertAttrWatch(parents, attr, allow_questionable);
+                        if (!foundValue){
+                            throw new Error('Expected attribute '+attr+' not found');
+                        }
                         foundObj = foundValue[0];
                         foundKey = foundValue[1];
                         found[key] = foundObj[foundKey];
@@ -209,8 +218,10 @@ sW.Module(sW.Handler, function(namespace){
         //if ^ is top parent, grab first
         //this should be the first handler on parent, but order isn't guaranteed
         parent = parents[nodes[0]];
+        console.log(parents, parent);
 
         nodes.splice(0,1);
+        console.log(nodes);
         $.each(nodes, function(i, v){
             if (i === nodes.length-1){
                 value = v;
@@ -220,6 +231,18 @@ sW.Module(sW.Handler, function(namespace){
         });
 
         return typeof parent !== 'undefined' ? [parent, value] : undefined;
+    }
+
+    //get the base variable and the variable from it (hopefully exposed)
+    this.getParentHandlerVar = function(path, parents){
+        var current = parents;
+        var parts = path.split('.');
+
+        for (var i=0; i<parts.length-1; i++){
+            current = current[parts[i]];
+        }
+
+        return [current, parts[parts.length-1]];
     }
 
     this.grabHandlersFrom = function(element){
@@ -237,7 +260,7 @@ sW.Module(sW.Handler, function(namespace){
         }
         //grab handlers from our immediate parent (which should chain up)
         //if we are window.body return (highest allowed node)
-        if (element !== document.body){
+        if (element !== document.body && element.parentElement){
             $.each(this.grabHandlersFrom(element.parentElement), function(key, value){
                 if (typeof handlers[key] === 'undefined'){
                     handlers[key] = value;
@@ -251,17 +274,22 @@ sW.Module(sW.Handler, function(namespace){
     this.runHandlers = function(){
         //bind as a handler name to the value of the attr (if any), or just use the handler name
         var element = document.body;
+        var args = {};
         if (arguments.length > 0){
-            element = arguments[0];
+            args = arguments[0];
+        }
+        if (arguments.length > 1){
+            element = arguments[1];
         }
         //grab attrs of the element
         var attrs = sW.Utils.getAllAttrsFromElement(element);
         var parents = this.grabHandlersFrom(element);
+        var runChildren = false;
 
         $.each(namespace.allHandlers, function(key, h){
             var handlerValue = h.handlerValue;
             if (attrs.hasOwnProperty(key)){
-                var handler = new h(element, parents, attrs, handlerValue);
+                var handler = new h(element, parents, attrs, handlerValue, args);
                 var data = $.data(element, '_handlers');
                 if (typeof $.data(element, '_handlers') === 'undefined'){
                     data = {};
@@ -273,11 +301,21 @@ sW.Module(sW.Handler, function(namespace){
                     var alias = attrs[key] || key;
                 }
                 data[alias] = handler;
+                if (handler.runChildren){
+                    if (runChildren){
+                        console.warn('Having multiple handlers that define runChildren may not work correctly:', element);
+                    }
+                    runChildren = handler;
+                }
             }
         });
 
-        $.each(element.children, function(i, value){
-            namespace.runHandlers(value);
-        });
+        if (runChildren){
+            runChildren.runChildren();
+        } else {
+            $.each(element.children, function(i, value){
+                namespace.runHandlers(args, value);
+            });
+        }
     }
 });

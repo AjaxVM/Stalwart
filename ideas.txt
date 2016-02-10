@@ -52,3 +52,22 @@ master (= value - string delimited for multiple)
 
 <body master='main-page'>
     <h1 
+
+
+
+if we do sw-repeat, first decide if it is parent element repeating children, or if it is individual elements.
+if we do individual elements, wrap each element inside a div with Handler (sw-repeat-element=forAsValue)
+    bind the value/key of that handler to the loops values and expose them (so inside you do forAsValue.value/key
+Pass the key/value as parent args into the sw-repeat-element Handler
+
+
+
+-----------------
+
+URLs:
+
+handle with a cusotm entry point - dango url catches anything (maybe within reason?) and points to the URL handler
+custom urls are then defined in that file which will route the request to the appropriate view.
+should allow matching against url parts, queryparams or post body
+should format the kwargs to view from those values as needed
+

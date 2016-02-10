@@ -25,7 +25,11 @@
 
     <br/><br/>
 
-    <div sw-repeat='my-master.ages'></div>
+    <div>
+      <div sw-repeat='my-master.ages:age'>
+        <div sw-bind='age.value'></div>
+      </div>
+    </div>
   </body>
 
   <script src="../tests/external/jquery-2.1.4.js" type='text/javascript'></script>
@@ -53,7 +57,7 @@
 
               this.ages = [];
               for (var i=0;i<100;i++){
-                this.ages.push(i);
+                this.ages.push({value: ""+(i*2)});
               }
           }
       });
