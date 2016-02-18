@@ -21,15 +21,17 @@
       <option value='classical'>Music: Classical</option>
     </select>
     <br/>
+    <!-- TODO: this is trying to set sw-value while the option for it doesn't exist yet
+               to fix we could force repeat to run before other handlers,
+               but, I do not think enforcing order on these is the correct idea
+               Perhaps instead allow registering before and after function for handlers
+               that are guaranteed to fire before/after definitions execute
+               and sw-bind would set the value after so that it is guaranteed to run?-->
+    My age is: <select sw-value='my-master.age' sw-repeat='my-master.ages:age'>
+      <option sw-bind='age'></option>
+    </select> <span sw-bind='my-master.age'></span>
+    <br/>
     <input type='button' sw-click='my-master.reset' value='Reset Master' />
-
-    <br/><br/>
-
-    <div>
-      <div sw-repeat='my-master.ages:age'>
-        <div sw-bind='age.value'></div>
-      </div>
-    </div>
   </body>
 
   <script src="../tests/external/jquery-2.1.4.js" type='text/javascript'></script>
@@ -46,7 +48,7 @@
       sW.Handler.Handler({
           name: 'master',
           expects: {},
-          exposes: ['type', 'value', 'ages'],
+          exposes: ['type', 'value', 'ages', 'age'],
           definition: function(element, args, parents){
               var cls = this;
               this.reset = function(){
@@ -57,8 +59,10 @@
 
               this.ages = [];
               for (var i=0;i<100;i++){
-                this.ages.push({value: ""+(i*2)});
+                this.ages.push(""+i*2);
               }
+
+              this.age = this.ages[0];
           }
       });
 

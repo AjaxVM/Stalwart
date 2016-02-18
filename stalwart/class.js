@@ -28,6 +28,32 @@ sW.Module(sW, function(){
         definition.__parents = [];
         definition.__className = __className;
 
+        definition.expose = function(prop){
+            // THIS method works for keeping scope properly and everything works
+            // this is also nearly as fast as Classes without any exposing, and is on prototype.
+            // The thing is, just defining functions with closures around prop is failing
+            // setting one of these props sets all somehow - hence the need to eval them :/
+
+            // If that is the case - do we need to clean the props to make sure they are safe?
+            // But then, how safe does it have to be?
+            // Currently everything is looking up the prop via this[prop] - so it should be safe with any keys
+
+            //firt, check if we have a value
+            var value = this[prop];
+            if (typeof value !== 'undefined'){
+                delete this[prop];
+            }
+            var propGetter, propSetter;
+            eval("propGetter = function(){return this.__getAttr__ ? this.__getAttr__(\""+prop+"\") : this.__getExposed__(\""+prop+"\");}");
+            eval("propSetter = function(value){return this.__setAttr__ ? this.__setAttr__(\""+prop+"\", value) : this.__setExposed__(\""+prop+"\", value);}");
+            definition.__defineGetter__(prop, propGetter);
+            definition.__defineSetter__(prop, propSetter);
+
+            if (typeof value !== 'undefined'){
+                this[prop] = value;
+            }
+        }
+
         definition.mutated = function(prop){
             if (this.__watchers__ && this.__watchers__[prop]){
                 for (var i=0; i<this.__watchers__[prop].length; i++){
@@ -183,19 +209,20 @@ sW.Module(sW, function(){
             //now create the getters and setters for the public properties
             for (i=0; i<definition.__public__.length; i++){
                 var prop = definition.__public__[i];
-                // THIS method works for keeping scope properly and everything works
-                // this is also nearly as fast as Classes without any exposing, and is on prototype.
-                // The thing is, just defining functions with closures around prop is failing
-                // setting one of these props sets all somehow - hence the need to eval them :/
+                definition.expose(prop);
+                // // THIS method works for keeping scope properly and everything works
+                // // this is also nearly as fast as Classes without any exposing, and is on prototype.
+                // // The thing is, just defining functions with closures around prop is failing
+                // // setting one of these props sets all somehow - hence the need to eval them :/
 
-                // If that is the case - do we need to clean the props to make sure they are safe?
-                // But then, how safe does it have to be?
-                // Currently everything is looking up the prop via this[prop] - so it should be safe with any keys
-                var propGetter, propSetter;
-                eval("propGetter = function(){return this.__getAttr__ ? this.__getAttr__(\""+prop+"\") : this.__getExposed__(\""+prop+"\");}");
-                eval("propSetter = function(value){return this.__setAttr__ ? this.__setAttr__(\""+prop+"\", value) : this.__setExposed__(\""+prop+"\", value);}");
-                definition.__defineGetter__(prop, propGetter);
-                definition.__defineSetter__(prop, propSetter);
+                // // If that is the case - do we need to clean the props to make sure they are safe?
+                // // But then, how safe does it have to be?
+                // // Currently everything is looking up the prop via this[prop] - so it should be safe with any keys
+                // var propGetter, propSetter;
+                // eval("propGetter = function(){return this.__getAttr__ ? this.__getAttr__(\""+prop+"\") : this.__getExposed__(\""+prop+"\");}");
+                // eval("propSetter = function(value){return this.__setAttr__ ? this.__setAttr__(\""+prop+"\", value) : this.__setExposed__(\""+prop+"\", value);}");
+                // definition.__defineGetter__(prop, propGetter);
+                // definition.__defineSetter__(prop, propSetter);
             }
         }
 

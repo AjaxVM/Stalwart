@@ -56,7 +56,6 @@ sW.Module(sW.Handler, function(namespace){
                 //make sure we teardown after things go away
                 var cls = this;
                 $(element).on('sWCleaned', function(){
-                    console.log('clearing:', this);
                     cls.clearListeners();
                 });
             }
@@ -126,11 +125,11 @@ sW.Module(sW.Handler, function(namespace){
                         found[key] = namespace.convertAttrExists(attr);
                     //check if we are assigning to a literal (simple only for now)
                     } else if (value === '='){
-                        found[key] = namespace.convertAttrLiteral(parents, attr, allow_questionable);
+                        found[key] = namespace.convertAttrLiteral(parents, attr, passedArgs, allow_questionable);
                     //return obj.key (one-time binding) and exposes obj and key for binding
                     } else if (value === '@'){
                         //I think I have to return the parent object and the varname here, not just the varname
-                        foundValue = namespace.convertAttrWatch(parents, attr, allow_questionable);
+                        foundValue = namespace.convertAttrWatch(parents, attr, passedArgs, allow_questionable);
                         if (!foundValue){
                             throw new Error('Expected attribute '+attr+' not found');
                         }
@@ -140,9 +139,9 @@ sW.Module(sW.Handler, function(namespace){
                         cls.__expectBindables__[key] = [foundObj, foundKey];
                     //check if a composite (=@/@=) which checks if bindable or value
                     } else if (value === '@=' || value === '=@'){
-                        var foundValue = namespace.convertAttrWatch(parents, attr, allow_questionable);
+                        var foundValue = namespace.convertAttrWatch(parents, attr, passedArgs, allow_questionable);
                         if (typeof foundValue === 'undefined'){
-                            foundValue = namespace.convertAttrLiteral(parents, attr, allow_questionable);
+                            foundValue = namespace.convertAttrLiteral(parents, attr, passedArgs, allow_questionable);
                         } else {
                             foundObj = foundValue[0];
                             foundKey = foundValue[1];
@@ -168,7 +167,7 @@ sW.Module(sW.Handler, function(namespace){
         }
         return true;
     }
-    this.convertAttrLiteral = function(parents, attr, allow_questionable){
+    this.convertAttrLiteral = function(parents, attr, passedArgs, allow_questionable){
         //handles simple Javascript literals (string, boolean, number)
 
         //if undefined and allow_questionable, return null, not false
@@ -197,7 +196,7 @@ sW.Module(sW.Handler, function(namespace){
         }
         return attr;
     }
-    this.convertAttrWatch = function(parents, attr, allow_questionable){
+    this.convertAttrWatch = function(parents, attr, passedArgs, allow_questionable){
         if (typeof attr === 'undefined'){
             if (allow_questionable){
                 return null;
@@ -210,20 +209,35 @@ sW.Module(sW.Handler, function(namespace){
         var nodes = attr.split('.');
         var parent, value;
 
-        // if (nodes.length === 1){
-        //     throw new Error('No parent declared, use ^.attr for nearest parent');
+        //check if this was passed in, so we aren't going to parent
+        parent = passedArgs;
+        $.each(nodes, function(i, v){
+            if (typeof parent === 'undefined'){
+                return false;
+            } else if (i === nodes.length-1){
+                value = v;
+            } else {
+                parent = parent[v];
+            }
+        });
+
+        if (typeof parent !== 'undefined' && typeof value !== 'undefined'){
+            return [parent, value];
+        }
+        // if (typeof passedArgs[attr] !== 'undefined'){
+        //     return [passedArgs, attr];
         // }
 
         //find top-level parent
         //if ^ is top parent, grab first
         //this should be the first handler on parent, but order isn't guaranteed
         parent = parents[nodes[0]];
-        console.log(parents, parent);
 
         nodes.splice(0,1);
-        console.log(nodes);
         $.each(nodes, function(i, v){
-            if (i === nodes.length-1){
+            if (typeof parent === 'undefined'){
+                return false;
+            } else if (i === nodes.length-1){
                 value = v;
             } else {
                 parent = parent[v];
