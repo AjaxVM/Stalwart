@@ -4,7 +4,7 @@
 
 
 sW.Utils = {};
-sW.Module(sW.Utils, function(){
+sW.Module(sW.Utils, function(namespace){
     "use strict";
     
     this.sleepFor = function( sleepDuration ){
@@ -90,5 +90,18 @@ sW.Module(sW.Utils, function(){
         return string;
     };
     this.formatString.default_separator = "{,}";
+
+    this.getAllAttrsFromElement = function(ele){
+        if (typeof ele.attributes === 'undefined'){
+            ele = ele[0];
+        }
+        var attrs = {};
+
+        namespace.forEach(ele.attributes, function(key, value){
+            attrs[value.nodeName] = value.nodeValue;
+        });
+
+        return attrs;
+    }
 });
 //End "Utils"
