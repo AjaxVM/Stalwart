@@ -136,6 +136,8 @@ sW.afterInit(function(){
         QUnit.equal(attrs.mouse, "false");
         QUnit.equal(attrs.age, "5");
         QUnit.equal(typeof attrs.something, "undefined");
+
+        tested('sW.Utils.getAllAttrsFromElement');
     });
 
 });
