@@ -36,7 +36,9 @@ sW.Module(sW.Handler, function(namespace){
             throw new Error('sW.Handler.Handler requires a name of type string');
         }
         expects = structure.expects || {};
+        beforeDefinition = structure.beforeDefinition;
         definition = structure.definition;
+        afterDefinition = structure.afterDefinition;
         handlerValue = structure.handlerValue || 'alias';
         __public__ = structure.exposes || [];
         runChildren = structure.runChildren || false;
@@ -51,13 +53,29 @@ sW.Module(sW.Handler, function(namespace){
             this.__init__ = function(element, parents, attrs, handlerValue, args){
                 //var args = this.__resolveExpects__(element, parents, attrs, handlerValue);
                 this.__args__ = this.__resolveExpects__(element, parents, attrs, handlerValue, args);
-                definition.call(this, $(element), this.__args__, parents);
+                // definition.call(this, $(element), this.__args__, parents);
 
                 //make sure we teardown after things go away
                 var cls = this;
                 $(element).on('sWCleaned', function(){
                     cls.clearListeners();
                 });
+            }
+
+            this.runBeforeDefinition = function(element, parents, attrs, handlerValue, args){
+                if (typeof beforeDefinition !== 'undefined'){
+                    beforeDefinition.call(this, $(element), this.__args__, parents);
+                }
+            }
+
+            this.runDefinition = function(element, parents, attrs, handlerValue, args){
+                definition.call(this, $(element), this.__args__, parents);
+            }
+
+            this.runAfterDefinition = function(element, parents, attrs, handlerValue, args){
+                if (typeof afterDefinition !== 'undefined'){
+                    afterDefinition.call(this, $(element), this.__args__, parents);
+                }
             }
 
             //TODO: do we need two-way binding on this? or just ways to update/listen to values?
@@ -79,6 +97,8 @@ sW.Module(sW.Handler, function(namespace){
             this.listenArg = function(arg, callback){
                 var foundObj = this.__expectBindables__[arg][0];
                 var foundKey = this.__expectBindables__[arg][1];
+
+                console.log(foundObj);
 
                 foundObj.listen(foundKey, callback);
             }
@@ -300,36 +320,84 @@ sW.Module(sW.Handler, function(namespace){
         var parents = this.grabHandlersFrom(element);
         var runChildren = false;
 
+        var handlers = [];
+
         $.each(namespace.allHandlers, function(key, h){
             var handlerValue = h.handlerValue;
             if (attrs.hasOwnProperty(key)){
+
                 var handler = new h(element, parents, attrs, handlerValue, args);
-                var data = $.data(element, '_handlers');
-                if (typeof $.data(element, '_handlers') === 'undefined'){
-                    data = {};
-                    $.data(element, '_handlers', data);
-                }
-                //store handler by name specified
-                var alias = key;
-                if (handlerValue === 'alias'){
-                    var alias = attrs[key] || key;
-                }
-                data[alias] = handler;
-                if (handler.runChildren){
-                    if (runChildren){
-                        console.warn('Having multiple handlers that define runChildren may not work correctly:', element);
-                    }
-                    runChildren = handler;
-                }
+                handlers.push({
+                    key: key,
+                    handler: handler,
+                    data: {},
+                    runChildren: false,
+                    handlerValue: handlerValue
+                });
+
+                // var handler = new h(element, parents, attrs, handlerValue, args);
+                // var data = $.data(element, '_handlers');
+                // if (typeof $.data(element, '_handlers') === 'undefined'){
+                //     data = {};
+                //     $.data(element, '_handlers', data);
+                // }
+                // //store handler by name specified
+                // var alias = key;
+                // if (handlerValue === 'alias'){
+                //     var alias = attrs[key] || key;
+                // }
+                // data[alias] = handler;
+                // if (handler.runChildren){
+                //     if (runChildren){
+                //         console.warn('Having multiple handlers that define runChildren may not work correctly:', element);
+                //     }
+                //     runChildren = handler;
+                // }
             }
         });
 
-        if (runChildren){
-            runChildren.runChildren();
-        } else {
-            $.each(element.children, function(i, value){
-                namespace.runHandlers(args, value);
-            });
-        }
+        //run setup functions for handler
+        $.each(handlers, function(i, handler){
+
+            handler.data = $.data(element, '_handlers');
+            if (typeof $.data(element, '_handlers') === 'undefined'){
+                handler.data = {};
+                $.data(element, '_handlers', handler.data);
+            }
+            //store handler by name specified
+            var alias = handler.key;
+            if (handler.handlerValue === 'alias'){
+                var alias = attrs[handler.key] || handler.key;
+            }
+            handler.data[alias] = handler.handler;
+            if (handler.handler.runChildren){
+                if (handler.runChildren){
+                    console.warn('Having multiple handlers that define runChildren may not work correctly:', element);
+                }
+                handler.runChildren = handler.handler;
+            }
+        });
+
+        //run beforeDefinition functions
+        $.each(handlers, function(i, handler){
+            handler.handler.runBeforeDefinition(element, parents, attrs, handler.handlerValue, args);
+        });
+
+        //run definitions
+        $.each(handlers, function(i, handler){
+            handler.handler.runDefinition(element, parents, attrs, handler.handlerValue, args);
+            if (handler.runChildren){
+                handler.runChildren.runChildren();
+            } else {
+                $.each(element.children, function(i, value){
+                    namespace.runHandlers(args, value);
+                });
+            }
+        });
+
+        //run afterDefinition functions
+        $.each(handlers, function(i, handler){
+            handler.handler.runAfterDefinition(element, parents, attrs, handler.handlerValue, args);
+        });
     }
 });
