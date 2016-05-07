@@ -98,8 +98,6 @@ sW.Module(sW.Handler, function(namespace){
                 var foundObj = this.__expectBindables__[arg][0];
                 var foundKey = this.__expectBindables__[arg][1];
 
-                console.log(foundObj);
-
                 foundObj.listen(foundKey, callback);
             }
 
@@ -386,14 +384,27 @@ sW.Module(sW.Handler, function(namespace){
         //run definitions
         $.each(handlers, function(i, handler){
             handler.handler.runDefinition(element, parents, attrs, handler.handlerValue, args);
+        });
+
+        //run children - if any of our handlers want to handle this directly
+        //give first pick to the first handler - and ignore others
+        //TODO: allow multiple handlers to run this somehow?
+        var childrenRun = false;
+        $.each(handlers, function(i, handler){
+            if (childrenRun) return;
             if (handler.runChildren){
                 handler.runChildren.runChildren();
-            } else {
-                $.each(element.children, function(i, value){
-                    namespace.runHandlers(args, value);
-                });
+                childrenRun = true;
+                return;
             }
         });
+
+        if (!childrenRun){
+            //nothing wants to control this - continue
+            $.each(element.children, function(i, value){
+                namespace.runHandlers(args, value);
+            });
+        }
 
         //run afterDefinition functions
         $.each(handlers, function(i, handler){

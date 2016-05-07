@@ -28,6 +28,7 @@
                that are guaranteed to fire before/after definitions execute
                and sw-bind would set the value after so that it is guaranteed to run?-->
     My age is: <select sw-value='my-master.age' sw-repeat='my-master.ages:age'>
+      <!-- TODO: select option that matches my-master.age -->
       <option sw-bind='age'></option>
     </select> <span sw-bind='my-master.age'></span>
     <br/>

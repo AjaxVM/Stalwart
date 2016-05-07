@@ -90,14 +90,12 @@ sW.Module(sW.Handler, function(namespace){
             });
         },
         runChildren: function(){
-
             var cls=this;
             var anchor = this.anchor;
-            console.log(anchor);
             var child, args;
             $.each(this.targetObj[this.target], function(key, value){
                 child = cls.childTemplate.clone();
-                child.text('test');
+                child.text(String(value));
                 anchor.append(child);
 
                 namespace.runHandlers(new cls.childScopeObj(cls.alias, value), child);
