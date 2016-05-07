@@ -33,7 +33,7 @@ var sWFinishedModules = [];
 //run this test after all others finish
 QUnit.moduleDone(function(obj){
     if (sWFinishedModules.indexOf(obj.name) > -1){
-        return; //break so we don't inifitely loop
+        return; //break so we don't infinitely loop
     }
     sWFinishedModules.push(obj.name);
 

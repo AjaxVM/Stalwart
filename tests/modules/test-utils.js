@@ -127,4 +127,15 @@ sW.afterInit(function(){
         tested('sW.Utils.formatString');
     });
 
+    QUnit.test('Utils.getAllAttrsFromElement', function(){
+        var testEl = $('<div cat="true" mouse="false" age=5></div');
+
+        var attrs = sW.Utils.getAllAttrsFromElement(testEl);
+
+        QUnit.equal(attrs.cat, "true");
+        QUnit.equal(attrs.mouse, "false");
+        QUnit.equal(attrs.age, "5");
+        QUnit.equal(typeof attrs.something, "undefined");
+    });
+
 });
