@@ -50,6 +50,8 @@ master (= value - string delimited for multiple)
     Attributes that reference {master....} should place a watch on master/value and also set a function onchange to update it
 
 
+Maybe just bite the bullet and make this in Node?
+
 <body master='main-page'>
     <h1 
 
